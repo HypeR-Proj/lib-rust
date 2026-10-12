@@ -513,6 +513,14 @@ impl<'owner, T: ObjectType> HandleRef<'owner, T> {
         self.raw
     }
 
+    /// Creates an independently owned handle with attenuated rights.
+    pub fn duplicate(&self, rights: Rights) -> Result<OwnedHandle<T>> {
+        let result = duplicate_raw(self.raw, rights);
+        Status::from_raw(result.status).into_result()?;
+        // SAFETY: duplication produces a new owner; reject an alias to the live source.
+        unsafe { adopt_produced_handle_excluding(result.value0, &[self.raw]) }
+    }
+
     /// Queries metadata without acquiring or consuming authority.
     pub fn info(&self) -> Result<HandleInfo> {
         query_info(self.raw)

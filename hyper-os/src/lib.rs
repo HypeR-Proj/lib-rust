@@ -30,6 +30,7 @@ pub mod memory;
 mod relay;
 pub mod startup;
 mod status;
+pub mod stream;
 pub mod system;
 pub mod task;
 pub mod thread;

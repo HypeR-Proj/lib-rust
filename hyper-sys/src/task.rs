@@ -60,6 +60,51 @@ pub unsafe fn task_group_create(
     }
 }
 
+/// Derives a wait-only Process observer.
+///
+/// # Safety
+///
+/// `handle` must remain live with wait, transfer and request-stop rights for this call.
+/// Successful observer derivation transfers ownership of the returned handle.
+#[inline]
+pub unsafe fn process_derive_observer(handle: abi::HyperNativeHandle) -> CallResult {
+    // SAFETY: the caller establishes the live capability contract.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_PROCESS_DERIVE_OBSERVER,
+            handle,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
+/// Requests stop for all members of a task group.
+///
+/// # Safety
+///
+/// `handle` must remain live with request-stop rights for this call.
+/// Successful observer derivation transfers ownership of the returned handle.
+#[inline]
+pub unsafe fn task_group_request_stop(handle: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
+    // SAFETY: the caller establishes the live capability contract.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_TASK_GROUP_REQUEST_STOP,
+            handle,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+        .status
+    }
+}
+
 /// Retrieves terminal and lifecycle information for one raw Process handle.
 ///
 /// # Safety

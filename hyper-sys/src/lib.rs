@@ -27,8 +27,8 @@ mod vm;
 mod wait;
 
 pub use console::{
-    console_read, console_write, virtual_serial_acknowledge_output, virtual_serial_create,
-    virtual_serial_register_output, virtual_serial_write,
+    console_discard_input, console_read, console_write, virtual_serial_acknowledge_output,
+    virtual_serial_create, virtual_serial_register_output, virtual_serial_write,
 };
 pub use device::{
     device_claim, device_claim_bundle, device_claim_matching, device_firmware_read,
@@ -75,9 +75,10 @@ pub use system::{abi_query, clock_get_monotonic, clock_get_realtime, system_conf
 pub use task::{
     process_builder_abort, process_builder_add_handle, process_builder_create,
     process_builder_seal, process_builder_set_affinity, process_builder_set_data,
-    process_builder_set_name, process_builder_start, process_exit, process_get_current_id,
-    process_get_info, process_request_stop, resource_domain_create, task_group_create,
-    thread_create, thread_exit, thread_request_stop, thread_sleep, thread_start, thread_yield,
+    process_builder_set_name, process_builder_start, process_derive_observer, process_exit,
+    process_get_current_id, process_get_info, process_request_stop, resource_domain_create,
+    task_group_create, task_group_request_stop, thread_create, thread_exit, thread_request_stop,
+    thread_sleep, thread_start, thread_yield,
 };
 pub use vm::{
     guest_memory_create, pending_virtual_machine_abort, pending_virtual_machine_assign_device,

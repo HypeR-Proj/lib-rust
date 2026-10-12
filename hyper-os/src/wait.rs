@@ -60,6 +60,13 @@ impl ObjectSignals<crate::handle::VirtualSerialObject> {
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_VIRTUAL_SERIAL_PEER_CLOSED);
 }
 
+impl ObjectSignals<crate::handle::ConsoleObject> {
+    pub const READABLE: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_CONSOLE_READABLE);
+    pub const WRITABLE: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_CONSOLE_WRITABLE);
+}
+
 impl ObjectSignals<ByteChannelObject> {
     pub const READABLE: Self =
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_BYTE_CHANNEL_READABLE);
@@ -83,6 +90,11 @@ impl ObjectSignals<CapabilityChannelObject> {
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_CAPABILITY_CHANNEL_PEER_RECEIVING);
     pub const PEER_CLOSED: Self =
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_CAPABILITY_CHANNEL_PEER_CLOSED);
+}
+
+impl ObjectSignals<crate::handle::TaskGroupObject> {
+    pub const TERMINATED: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_TASK_GROUP_TERMINATED);
 }
 
 impl ObjectSignals<ProcessObject> {

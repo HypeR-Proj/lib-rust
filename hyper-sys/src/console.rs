@@ -137,3 +137,22 @@ pub unsafe fn console_write(
     // SAFETY: the caller establishes handle and input-buffer validity.
     unsafe { ffi_console_write(console, bytes, count) }
 }
+
+/// Discards the currently accepted physical input prefix without waiting.
+///
+/// # Safety
+/// The caller retains a live Console handle carrying READ authority.
+pub unsafe fn console_discard_input(console: abi::HyperNativeHandle) -> CallResult {
+    // SAFETY: the caller retains the required Console authority.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_CONSOLE_DISCARD_INPUT,
+            console,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}

@@ -22,6 +22,59 @@ impl<'startup> Console<'startup> {
         Self { handle }
     }
 
+    pub fn as_handle_ref(&self) -> HandleRef<'_, ConsoleObject> {
+        self.handle
+    }
+
+    /// Takes one available prefix, without waiting or interpreting characters.
+    pub fn try_read(&self, bytes: &mut [u8]) -> Result<usize> {
+        if bytes.is_empty() {
+            return Ok(0);
+        }
+        let capacity = bytes.len().min(MAX_TRANSFER_BYTES);
+        // SAFETY: the retained Console and writable prefix remain valid for the syscall.
+        let result = unsafe {
+            hyper_sys::console_read(self.handle.raw().get(), bytes.as_mut_ptr(), capacity)
+        };
+        let status = Status::from_raw(result.status);
+        if status != Status::OK && status != Status::WOULD_BLOCK {
+            return Err(Error::Status(status));
+        }
+        let count = decode_transfer_count(result.value0, capacity)?;
+        if count == 0 {
+            return Err(Error::Status(Status::WOULD_BLOCK));
+        }
+        Ok(count)
+    }
+
+    /// Enqueues one prefix; acceptance does not mean the UART has transmitted it.
+    pub fn try_write(&self, bytes: &[u8]) -> Result<usize> {
+        if bytes.is_empty() {
+            return Ok(0);
+        }
+        let count = bytes.len().min(MAX_TRANSFER_BYTES);
+        // SAFETY: the retained Console and readable prefix remain valid for the syscall.
+        let result =
+            unsafe { hyper_sys::console_write(self.handle.raw().get(), bytes.as_ptr(), count) };
+        let status = Status::from_raw(result.status);
+        if status != Status::OK && status != Status::WOULD_BLOCK {
+            return Err(Error::Status(status));
+        }
+        let count = decode_transfer_count(result.value0, count)?;
+        if count == 0 {
+            return Err(Error::Status(Status::WOULD_BLOCK));
+        }
+        Ok(count)
+    }
+
+    /// Atomically discards the kernel's accepted input snapshot. Later arrivals remain.
+    pub fn discard_input(&self) -> Result<usize> {
+        // SAFETY: this borrow retains READ authority through the no-pointer syscall.
+        let result = unsafe { hyper_sys::console_discard_input(self.handle.raw().get()) };
+        Status::from_raw(result.status).into_result()?;
+        usize::try_from(result.value0).map_err(|_| Error::InvalidResponse)
+    }
+
     /// Waits for input and returns at least one byte unless `bytes` is empty.
     pub fn read_blocking(&self, bytes: &mut [u8]) -> Result<usize> {
         if bytes.is_empty() {

@@ -36,6 +36,7 @@ const CHILD_RESOURCE_DOMAIN_RIGHTS: Rights = Rights::DUPLICATE
     .union(Rights::REVOKE)
     .union(Rights::RESOURCE_DOMAIN_SPONSOR);
 const CHILD_TASK_GROUP_RIGHTS: Rights = Rights::DUPLICATE
+    .union(Rights::WAIT)
     .union(Rights::TRANSFER)
     .union(Rights::INSPECT)
     .union(Rights::REQUEST_STOP)
@@ -458,6 +459,20 @@ pub struct ProcessSupervisor<'owner> {
 }
 
 impl ProcessSupervisor<'_> {
+    /// Creates a transferable wait-only view of this same Process identity.
+    /// The observer cannot inspect, stop, or derive another observer.
+    pub fn observe(&self) -> Result<OwnedHandle<ProcessObject>> {
+        let raw = self.handle.raw();
+        // SAFETY: the typed Process borrow remains live throughout derivation.
+        let result = unsafe { hyper_sys::process_derive_observer(raw.get()) };
+        Status::from_raw(result.status).into_result()?;
+        adopt_produced_handle::<ProcessObject>(
+            result.value0,
+            Rights::WAIT.union(Rights::TRANSFER),
+            &[raw],
+        )
+    }
+
     /// Requests asynchronous termination of the supervised Process.
     pub fn request_stop(&self) -> Result<()> {
         Status::from_raw(raw_ops::request_process_stop(self.handle)).into_result()
@@ -544,6 +559,49 @@ impl OwnedHandle<ProcessObject> {
         ProcessSupervisor {
             handle: self.as_handle_ref(),
         }
+    }
+}
+
+/// Borrowed control over a flat process task group.
+pub struct TaskGroupSupervisor<'owner> {
+    handle: HandleRef<'owner, TaskGroupObject>,
+}
+
+impl TaskGroupSupervisor<'_> {
+    /// Closes membership admission and requests asynchronous member stop.
+    pub fn request_stop(&self) -> Result<()> {
+        // SAFETY: the typed borrow keeps the group capability live.
+        Status::from_raw(unsafe { hyper_sys::task_group_request_stop(self.handle.raw().get()) })
+            .into_result()
+    }
+
+    /// Waits until all members and pending constructors have retired. This does
+    /// not cover children that were placed in a different task group.
+    pub fn wait_terminated(&self, deadline: u64) -> Result<()> {
+        let expected = hyper_abi::HYPER_NATIVE_SIGNAL_TASK_GROUP_TERMINATED;
+        // SAFETY: the typed group borrow remains live for the complete wait.
+        let result =
+            unsafe { hyper_sys::object_wait_one(self.handle.raw().get(), expected, deadline) };
+        Status::from_raw(result.status).into_result()?;
+        if result.value0 & expected == expected {
+            Ok(())
+        } else {
+            Err(Error::InvalidResponse)
+        }
+    }
+}
+
+impl OwnedHandle<TaskGroupObject> {
+    /// Borrows this group for scoped lifecycle control.
+    pub fn as_task_group(&self) -> TaskGroupSupervisor<'_> {
+        self.as_handle_ref().as_task_group()
+    }
+}
+
+impl<'owner> HandleRef<'owner, TaskGroupObject> {
+    /// Borrows this group for scoped lifecycle control.
+    pub fn as_task_group(self) -> TaskGroupSupervisor<'owner> {
+        TaskGroupSupervisor { handle: self }
     }
 }
 
