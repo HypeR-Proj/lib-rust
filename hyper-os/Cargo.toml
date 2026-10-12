@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 roolrz
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "hyper-os"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Safe operating-system bindings for HypeR Native applications"
+
+[features]
+std = []
+
+[dependencies]
+hyper-abi.workspace = true
+hyper-sys = { path = "../hyper-sys" }
+
+[lints]
+workspace = true

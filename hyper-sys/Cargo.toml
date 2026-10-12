@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 roolrz
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "hyper-sys"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Raw syscall and runtime bindings for HypeR Native applications"
+
+[dependencies]
+hyper-abi.workspace = true
+
+[lints]
+workspace = true
