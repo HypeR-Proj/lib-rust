@@ -281,29 +281,38 @@ pub struct ThreadObservation {
     pub runtime_ticks: u64,
 }
 
-/// One immutable physical-memory accounting observation.
+/// Physical allocation counters plus independently sampled reclaimability.
+///
+/// Direct kernel, slab, large heap, page tables, VMO, private guest, and file
+/// cache bytes are disjoint. Guest-loaned bytes are a subset of VMO bytes,
+/// counted once per backing lease, including aliases shared with an I/O VM.
+/// Reserved memory and display totals are derived by consumers. All physical
+/// categories describe resident backing, never virtual address-space capacity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MemoryObservation {
     pub captured_at_ns: u64,
     pub page_size: u64,
     pub total_bytes: u64,
-    pub reserved_bytes: u64,
     pub managed_bytes: u64,
     pub free_bytes: u64,
-    pub used_bytes: u64,
     pub kernel_bytes: u64,
-    pub heap_bytes: u64,
+    pub slab_bytes: u64,
+    pub large_heap_bytes: u64,
     pub page_table_bytes: u64,
-    pub user_bytes: u64,
-    pub guest_bytes: u64,
-    pub unattributed_bytes: u64,
-    /// Complete physical pages recoverable by draining allocator caches.
-    /// Zero when `cache_sample_complete` is false; this does not mean no cache.
-    pub reclaimable_bytes: u64,
-    /// False when concurrent cache activity prevented a coherent page census.
-    pub cache_sample_complete: bool,
-    /// Physical storage owned by an independent block-I/O buffer pool.
-    pub buffered_bytes: u64,
+    pub vmo_bytes: u64,
+    pub guest_loaned_bytes: u64,
+    pub guest_private_bytes: u64,
+    pub file_cache_bytes: u64,
+    /// Whole slab pages recoverable by draining CPU-local magazines.
+    /// None means the bounded concurrent census could not complete.
+    pub slab_reclaimable_bytes: Option<u64>,
+    /// Unpinned file-cache pages; independent of the slab census.
+    /// Some(0) is a successful observation of an empty reclaimable pool.
+    pub file_cache_reclaimable_bytes: Option<u64>,
+    /// Live ramfs payload capacity reservations, excluding archive contents.
+    /// Logical bytes overlap heap backing, but exclude allocator overhead and
+    /// rounding; they are not another physical category or reclaimable cache.
+    pub ramfs_capacity_bytes: u64,
 }
 
 /// One immutable aggregate scheduler CPU-time observation.
@@ -475,19 +484,21 @@ impl MemoryInspector {
             captured_at_ns: record.captured_at_ns,
             page_size: record.page_size,
             total_bytes: record.total_bytes,
-            reserved_bytes: record.reserved_bytes,
             managed_bytes: record.managed_bytes,
             free_bytes: record.free_bytes,
-            used_bytes: record.used_bytes,
             kernel_bytes: record.kernel_bytes,
-            heap_bytes: record.heap_bytes,
+            slab_bytes: record.slab_bytes,
+            large_heap_bytes: record.large_heap_bytes,
             page_table_bytes: record.page_table_bytes,
-            user_bytes: record.user_bytes,
-            guest_bytes: record.guest_bytes,
-            unattributed_bytes: record.unattributed_bytes,
-            reclaimable_bytes: record.reclaimable_bytes,
-            cache_sample_complete: record.cache_sample_complete == 1,
-            buffered_bytes: record.buffered_bytes,
+            vmo_bytes: record.vmo_bytes,
+            guest_loaned_bytes: record.guest_loaned_bytes,
+            guest_private_bytes: record.guest_private_bytes,
+            file_cache_bytes: record.file_cache_bytes,
+            ramfs_capacity_bytes: record.ramfs_capacity_bytes,
+            slab_reclaimable_bytes: (record.slab_sample_complete == 1)
+                .then_some(record.slab_reclaimable_bytes),
+            file_cache_reclaimable_bytes: (record.file_cache_sample_complete == 1)
+                .then_some(record.file_cache_reclaimable_bytes),
         })
     }
 }
@@ -527,20 +538,48 @@ impl CpuInspector {
 }
 
 fn validate_memory_observation(record: &hyper_abi::HyperNativeMemoryObservation) -> Result<()> {
-    let owner_bytes = record
-        .kernel_bytes
-        .checked_add(record.heap_bytes)
-        .and_then(|value| value.checked_add(record.page_table_bytes))
-        .and_then(|value| value.checked_add(record.user_bytes))
-        .and_then(|value| value.checked_add(record.guest_bytes))
-        .and_then(|value| value.checked_add(record.unattributed_bytes));
-    let valid = record.page_size != 0
-        && record.reserved_bytes.checked_add(record.managed_bytes) == Some(record.total_bytes)
-        && record.free_bytes.checked_add(record.used_bytes) == Some(record.managed_bytes)
-        && owner_bytes == Some(record.used_bytes)
-        && record.reclaimable_bytes <= record.used_bytes
-        && record.cache_sample_complete <= 1
-        && (record.cache_sample_complete == 1 || record.reclaimable_bytes == 0);
+    let allocated = record.managed_bytes.checked_sub(record.free_bytes);
+    let physical = [
+        record.kernel_bytes,
+        record.slab_bytes,
+        record.large_heap_bytes,
+        record.page_table_bytes,
+        record.vmo_bytes,
+        record.guest_private_bytes,
+        record.file_cache_bytes,
+    ];
+    let attributed = physical
+        .iter()
+        .try_fold(0u64, |sum, bytes| sum.checked_add(*bytes));
+    let valid_census =
+        |complete, bytes, limit| complete <= 1 && bytes <= limit && (complete == 1 || bytes == 0);
+    let valid = record.page_size.is_power_of_two()
+        && record.managed_bytes <= record.total_bytes
+        && allocated
+            .zip(attributed)
+            .is_some_and(|(allocated, attributed)| attributed <= allocated)
+        && record.guest_loaned_bytes <= record.vmo_bytes
+        && valid_census(
+            record.slab_sample_complete,
+            record.slab_reclaimable_bytes,
+            record.slab_bytes,
+        )
+        && valid_census(
+            record.file_cache_sample_complete,
+            record.file_cache_reclaimable_bytes,
+            record.file_cache_bytes,
+        )
+        && physical
+            .into_iter()
+            .chain([
+                record.total_bytes,
+                record.managed_bytes,
+                record.free_bytes,
+                record.guest_loaned_bytes,
+                record.slab_reclaimable_bytes,
+                record.file_cache_reclaimable_bytes,
+            ])
+            .all(|bytes| bytes.is_multiple_of(record.page_size));
     if !valid {
         return Err(Error::InvalidResponse);
     }
@@ -747,19 +786,21 @@ const ZERO_MEMORY: hyper_abi::HyperNativeMemoryObservation =
         captured_at_ns: 0,
         page_size: 0,
         total_bytes: 0,
-        reserved_bytes: 0,
         managed_bytes: 0,
         free_bytes: 0,
-        used_bytes: 0,
         kernel_bytes: 0,
-        heap_bytes: 0,
+        slab_bytes: 0,
+        large_heap_bytes: 0,
         page_table_bytes: 0,
-        user_bytes: 0,
-        guest_bytes: 0,
-        unattributed_bytes: 0,
-        reclaimable_bytes: 0,
-        cache_sample_complete: 0,
-        buffered_bytes: 0,
+        vmo_bytes: 0,
+        guest_loaned_bytes: 0,
+        guest_private_bytes: 0,
+        file_cache_bytes: 0,
+        slab_reclaimable_bytes: 0,
+        slab_sample_complete: 0,
+        file_cache_reclaimable_bytes: 0,
+        file_cache_sample_complete: 0,
+        ramfs_capacity_bytes: 0,
     };
 
 const ZERO_CPU: hyper_abi::HyperNativeCpuObservation = hyper_abi::HyperNativeCpuObservation {
@@ -971,45 +1012,62 @@ mod tests {
     }
 
     #[test]
-    fn memory_observations_require_complete_accounting_identities() {
-        let mut record = hyper_abi::HyperNativeMemoryObservation {
-            captured_at_ns: 1,
-            page_size: 4096,
-            total_bytes: 100,
-            reserved_bytes: 20,
-            managed_bytes: 80,
-            free_bytes: 30,
-            used_bytes: 50,
-            kernel_bytes: 10,
-            heap_bytes: 10,
-            page_table_bytes: 5,
-            user_bytes: 15,
-            guest_bytes: 5,
-            unattributed_bytes: 5,
-            reclaimable_bytes: 10,
-            cache_sample_complete: 1,
-            buffered_bytes: 0,
+    fn memory_observations_keep_partial_censuses_independent() {
+        let page = 4096;
+        let record = hyper_abi::HyperNativeMemoryObservation {
+            page_size: page,
+            total_bytes: 100 * page,
+            managed_bytes: 80 * page,
+            free_bytes: 30 * page,
+            slab_bytes: 10 * page,
+            vmo_bytes: 20 * page,
+            guest_loaned_bytes: 15 * page,
+            file_cache_bytes: 20 * page,
+            file_cache_reclaimable_bytes: 18 * page,
+            file_cache_sample_complete: 1,
+            ..super::ZERO_MEMORY
         };
+        // An unavailable slab census must not discard valid file-cache data.
         assert_eq!(validate_memory_observation(&record), Ok(()));
-
-        record.cache_sample_complete = 2;
-        assert_eq!(
-            validate_memory_observation(&record),
-            Err(crate::Error::InvalidResponse)
-        );
-        record.cache_sample_complete = 0;
-        assert_eq!(
-            validate_memory_observation(&record),
-            Err(crate::Error::InvalidResponse)
-        );
-        record.reclaimable_bytes = 0;
-        assert_eq!(validate_memory_observation(&record), Ok(()));
-
-        record.used_bytes = 49;
-        assert_eq!(
-            validate_memory_observation(&record),
-            Err(crate::Error::InvalidResponse)
-        );
+        for bad in [
+            hyper_abi::HyperNativeMemoryObservation {
+                guest_loaned_bytes: 21 * page,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                slab_reclaimable_bytes: page,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                file_cache_sample_complete: 0,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                file_cache_sample_complete: 2,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                file_cache_reclaimable_bytes: 21 * page,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                free_bytes: 31 * page,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                managed_bytes: 101 * page,
+                ..record
+            },
+            hyper_abi::HyperNativeMemoryObservation {
+                page_size: 0,
+                ..record
+            },
+        ] {
+            assert_eq!(
+                validate_memory_observation(&bad),
+                Err(crate::Error::InvalidResponse)
+            );
+        }
     }
 
     #[test]
