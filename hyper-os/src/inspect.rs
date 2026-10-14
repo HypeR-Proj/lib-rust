@@ -288,6 +288,8 @@ pub struct ThreadObservation {
 /// counted once per backing lease, including aliases shared with an I/O VM.
 /// Reserved memory and display totals are derived by consumers. All physical
 /// categories describe resident backing, never virtual address-space capacity.
+/// File-cache bytes include its dedicated heap metadata; those pages are
+/// excluded from slab and large-heap bytes to keep the categories disjoint.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MemoryObservation {
     pub captured_at_ns: u64,
@@ -306,7 +308,8 @@ pub struct MemoryObservation {
     /// Whole slab pages recoverable by draining CPU-local magazines.
     /// None means the bounded concurrent census could not complete.
     pub slab_reclaimable_bytes: Option<u64>,
-    /// Unpinned file-cache pages; independent of the slab census.
+    /// Unpinned file payload pages; independent of the slab census. This
+    /// conservative estimate excludes metadata released by cache compaction.
     /// Some(0) is a successful observation of an empty reclaimable pool.
     pub file_cache_reclaimable_bytes: Option<u64>,
     /// Live ramfs payload capacity reservations, excluding archive contents.
