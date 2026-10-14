@@ -72,7 +72,9 @@ impl FileProtection {
     /// faulted back; modified COW pages remain private to this process.
     ///
     /// The File needs READ, and this guard must belong to that same file.
-    /// Only `CopyOnWrite` is supported for file-backed mappings. The kernel
+    /// `Eager` reserves all pages in the calling process and prevents pressure
+    /// eviction. Filesystem providers use it to avoid paging into themselves.
+    /// The kernel
     /// retains protection independently until unmap or owner-process teardown.
     /// Creating the mapping can report allocation or quota errors. A later
     /// hardware fault that cannot be refilled after bounded reclaim retries
@@ -89,9 +91,6 @@ impl FileProtection {
         address: u64,
         options: PrivateMappingOptions,
     ) -> Result<PrivateMapping> {
-        if options.mode != PrivateMappingMode::CopyOnWrite {
-            return Err(Error::InvalidMemoryRange);
-        }
         // SAFETY: the caller owns the range; File, token and VMAR stay borrowed.
         unsafe {
             map_source(

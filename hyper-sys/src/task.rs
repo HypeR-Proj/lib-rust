@@ -473,3 +473,26 @@ pub unsafe fn process_get_current_id() -> CallResult {
         )
     }
 }
+
+/// Select whether a sealed child's root VMAR receives residency authority.
+///
+/// # Safety
+/// `builder` must remain live with WRITE and `LOCK_MEMORY` rights.
+pub unsafe fn process_builder_set_memory_lock(
+    builder: u64,
+    enabled: bool,
+) -> abi::HyperNativeStatus {
+    // SAFETY: The caller retains the capability for the non-retaining syscall.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_MEMORY_LOCK,
+            builder,
+            u64::from(enabled),
+            0,
+            0,
+            0,
+            0,
+        )
+        .status
+    }
+}

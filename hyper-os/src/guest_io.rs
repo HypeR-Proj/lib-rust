@@ -179,3 +179,60 @@ pub(crate) fn adopt_created<T: TypedObject>(
     }
     owner.downcast::<T>().map_err(|failure| failure.error())
 }
+
+/// Relocate a PCI frontend BAR inside a VM-owned userspace MMIO reservation.
+/// The original base identifies the connection; neither its backend nor its
+/// assigned interrupt can change. Memory decoding and `INTx` masking publish
+/// atomically with the source state, including an already pending interrupt.
+pub fn configure_pci_frontend(
+    machine: HandleRef<'_, VirtualMachineObject>,
+    original_base: u64,
+    base: u64,
+    memory_enabled: bool,
+    bus_master: bool,
+    intx_disabled: bool,
+) -> Result<()> {
+    let flags = 1
+        | (u32::from(memory_enabled) << 1)
+        | (u32::from(intx_disabled) << 2)
+        | (u32::from(bus_master) << 3);
+    // SAFETY: The borrowed VM handle remains live throughout the scalar call.
+    let result = unsafe {
+        hyper_sys::guest_notification_configure(machine.raw().get(), original_base, base, flags)
+    };
+    Status::from_raw(result.status).into_result()?;
+    if result.value0 != 0 || result.value1 != 0 {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(())
+}
+
+/// Explicit frontend operations for userspace register transports. These never
+/// expose the backend control authority held by the connection owner.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FrontendOperation {
+    InterruptStatus,
+    ReadAndClearInterrupt,
+    NotifyQueue(u16),
+}
+
+pub fn access_frontend(
+    machine: HandleRef<'_, VirtualMachineObject>,
+    original_base: u64,
+    operation: FrontendOperation,
+) -> Result<u32> {
+    let (operation, value) = match operation {
+        FrontendOperation::InterruptStatus => (0, 0),
+        FrontendOperation::ReadAndClearInterrupt => (1, 0),
+        FrontendOperation::NotifyQueue(queue) => (2, u32::from(queue)),
+    };
+    // SAFETY: The borrowed VM handle remains live throughout the scalar call.
+    let result = unsafe {
+        hyper_sys::guest_notification_access(machine.raw().get(), original_base, operation, value)
+    };
+    Status::from_raw(result.status).into_result()?;
+    if result.value1 != 0 {
+        return Err(Error::InvalidResponse);
+    }
+    u32::try_from(result.value0).map_err(|_| Error::InvalidResponse)
+}

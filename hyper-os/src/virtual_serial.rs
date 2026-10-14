@@ -3,7 +3,7 @@
 
 //! Runtime-allocated shared output and bounded guest input injection.
 
-use crate::handle::{AnyObject, HandleRef, OwnedHandle, Rights, VirtualSerialObject};
+use crate::handle::{AnyObject, HandleRef, OwnedHandle, Rights, VirtualSerialObject, VmoObject};
 use crate::{Error, Result, Status};
 
 const _: () =
@@ -44,10 +44,62 @@ pub fn create() -> Result<OwnedHandle<VirtualSerialObject>> {
 /// nonempty batch acknowledges consumption without a syscall data copy.
 pub struct Output {
     serial: OwnedHandle<VirtualSerialObject>,
+    memory: OwnedHandle<VmoObject>,
+    mapping: OutputMapping,
+    cursor: u64,
+}
+
+struct OutputMapping {
     region: Option<OwnedHandle<crate::handle::VmarObject>>,
     mapped: bool,
     address: usize,
-    cursor: u64,
+}
+
+/// Attenuated port authority retained by a transferable output consumer.
+pub const OUTPUT_RIGHTS: Rights = Rights::READ
+    .union(Rights::WAIT)
+    .union(Rights::DUPLICATE)
+    .union(Rights::TRANSFER);
+/// Ring pages remain read-only in either consumer; the kernel owns writes.
+pub const BUFFER_RIGHTS: Rights = Rights::READ
+    .union(Rights::MAP)
+    .union(Rights::DUPLICATE)
+    .union(Rights::TRANSFER);
+
+/// An unmapped output consumer. Handle values are process-local; transferring
+/// this state requires typed capability transfer plus the scalar cursor.
+pub struct PausedOutput {
+    pub serial: OwnedHandle<VirtualSerialObject>,
+    pub memory: OwnedHandle<VmoObject>,
+    pub cursor: u64,
+}
+
+/// A failed preparation retains the original consumer and its mapping.
+pub struct PauseError {
+    error: Error,
+    output: Output,
+}
+
+impl PauseError {
+    pub fn into_parts(self) -> (Error, Output) {
+        (self.error, self.output)
+    }
+}
+
+/// A failed remap retains the paused capabilities and cursor for retry.
+pub struct ResumeError {
+    error: Error,
+    state: PausedOutput,
+}
+
+impl ResumeError {
+    pub const fn error(&self) -> Error {
+        self.error
+    }
+
+    pub fn into_parts(self) -> (Error, PausedOutput) {
+        (self.error, self.state)
+    }
 }
 
 impl Output {
@@ -59,66 +111,87 @@ impl Output {
         address: u64,
         memory: crate::memory::WritableVmo,
     ) -> Result<Self> {
-        let output_owner = serial.duplicate(Rights::READ.union(Rights::WAIT))?;
-        let serial = serial.as_handle_ref();
-        let size = BUFFER_BYTES;
-        if memory.size() != size
-            || address == 0
-            || !address.is_multiple_of(crate::memory::PAGE_SIZE)
-            || address.checked_add(size).is_none()
-        {
+        if memory.size() != BUFFER_BYTES {
             return Err(Error::InvalidMemoryRange);
         }
-        let base = usize::try_from(address).map_err(|_| Error::InvalidMemoryRange)?;
-        // SAFETY: root remains borrowed; success reserves an exact unused region.
-        let result = unsafe {
-            hyper_sys::vmar_allocate(
-                root.raw().get(),
-                address,
-                size,
-                hyper_abi::HYPER_NATIVE_VMAR_ALLOCATE_EXACT,
-            )
-        };
-        Status::from_raw(result.status).into_result()?;
-        // SAFETY: success transfers a fresh child VMAR owner.
-        let region = unsafe {
-            crate::handle::adopt_produced_handle_excluding::<crate::handle::VmarObject>(
-                result.value0,
-                &[root.raw(), memory.as_handle_ref().raw(), serial.raw()],
-            )?
-        };
-        let region_raw = region.as_handle_ref().raw().get();
-        let mut mapping = Self {
-            serial: output_owner,
-            region: Some(region),
-            mapped: false,
-            address: base,
-            cursor: 0,
-        };
-        // SAFETY: this owner retains both the fresh region and caller's VMO;
-        // the fixed layout fits completely within its page-aligned extent.
-        Status::from_raw(unsafe {
-            hyper_sys::vmar_map(
-                region_raw,
-                memory.as_handle_ref().raw().get(),
-                0,
-                address,
-                size,
-                hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_READ,
-            )
-        })
-        .into_result()?;
-        mapping.mapped = true;
-        // SAFETY: no shared references have escaped and no consumer runs yet.
-        // Registration pins the VMO and initializes counters before returning.
+        let output_owner = serial.duplicate(OUTPUT_RIGHTS)?;
+        let buffer = memory.into_handle();
+        let mapping = OutputMapping::map(
+            output_owner.as_handle_ref(),
+            buffer.as_handle_ref(),
+            root,
+            address,
+        )?;
+        // SAFETY: no consumer runs yet. Registration pins the VMO and
+        // initializes its counters before the first producer can be bound.
         Status::from_raw(unsafe {
             hyper_sys::virtual_serial_register_output(
-                serial.raw().get(),
-                memory.as_handle_ref().raw().get(),
+                serial.as_handle_ref().raw().get(),
+                buffer.as_handle_ref().raw().get(),
             )
         })
         .into_result()?;
-        Ok(mapping)
+        Ok(Self {
+            serial: output_owner,
+            memory: buffer,
+            mapping,
+            cursor: 0,
+        })
+    }
+
+    /// Stops this consumer and retains its ring and exact acknowledgement cursor.
+    /// The returned capabilities keep the output open while another process
+    /// prepares a mapping. The producer retains normal bounded backpressure.
+    ///
+    /// The caller must move both capabilities through one rendezvous; it must
+    /// not create concurrent consumers of this cursor.
+    pub fn pause(self) -> core::result::Result<PausedOutput, PauseError> {
+        match self.handoff_state() {
+            Ok(state) => Ok(state),
+            Err(error) => Err(PauseError {
+                error,
+                output: self,
+            }),
+        }
+    }
+
+    /// Prepares a new consumer while retaining this mapping for allocation-free
+    /// rollback. After success, the caller must stop reading this `Output` until
+    /// the rendezvous outcome: drop it on committed transfer, or discard the
+    /// duplicated state and keep using it if transfer is rejected.
+    ///
+    /// This does not stop the guest producer. Buffered bytes remain available to
+    /// the selected consumer, and a full ring retains its ordinary backpressure.
+    pub fn handoff_state(&self) -> Result<PausedOutput> {
+        Ok(PausedOutput {
+            serial: self.serial.duplicate(OUTPUT_RIGHTS)?,
+            memory: self.memory.duplicate(BUFFER_RIGHTS)?,
+            cursor: self.cursor,
+        })
+    }
+
+    /// Recreates only the consumer mapping. It neither registers the port again
+    /// nor changes its published data, acknowledgement cursor or interrupt state.
+    pub fn resume(
+        state: PausedOutput,
+        root: HandleRef<'_, crate::handle::VmarObject>,
+        address: u64,
+    ) -> core::result::Result<Self, ResumeError> {
+        let mapping = match OutputMapping::map(
+            state.serial.as_handle_ref(),
+            state.memory.as_handle_ref(),
+            root,
+            address,
+        ) {
+            Ok(mapping) => mapping,
+            Err(error) => return Err(ResumeError { error, state }),
+        };
+        Ok(Self {
+            serial: state.serial,
+            memory: state.memory,
+            mapping,
+            cursor: state.cursor,
+        })
     }
 
     /// Copies a published prefix, then releases its slots to the producer.
@@ -133,7 +206,7 @@ impl Output {
         for (index, byte) in output[..count].iter_mut().enumerate() {
             let slot = (self.cursor + index as u64)
                 % hyper_abi::HYPER_NATIVE_VIRTUAL_SERIAL_OUTPUT_CAPACITY;
-            let address = self.address
+            let address = self.mapping.address
                 + hyper_abi::HYPER_NATIVE_VIRTUAL_SERIAL_OUTPUT_HEADER_BYTES as usize
                 + slot as usize;
             // SAFETY: Output exclusively owns the consumer cursor; the kernel
@@ -193,7 +266,7 @@ impl Output {
         // access these words atomically.
         unsafe {
             &*core::ptr::with_exposed_provenance::<core::sync::atomic::AtomicU64>(
-                self.address + offset,
+                self.mapping.address + offset,
             )
         }
     }
@@ -204,7 +277,63 @@ impl Output {
     }
 }
 
-impl Drop for Output {
+impl OutputMapping {
+    fn map(
+        serial: HandleRef<'_, VirtualSerialObject>,
+        memory: HandleRef<'_, VmoObject>,
+        root: HandleRef<'_, crate::handle::VmarObject>,
+        address: u64,
+    ) -> Result<Self> {
+        let size = BUFFER_BYTES;
+        if address == 0
+            || !address.is_multiple_of(crate::memory::PAGE_SIZE)
+            || address.checked_add(size).is_none()
+        {
+            return Err(Error::InvalidMemoryRange);
+        }
+        let base = usize::try_from(address).map_err(|_| Error::InvalidMemoryRange)?;
+        // SAFETY: root remains borrowed; success reserves an exact unused region.
+        let result = unsafe {
+            hyper_sys::vmar_allocate(
+                root.raw().get(),
+                address,
+                size,
+                hyper_abi::HYPER_NATIVE_VMAR_ALLOCATE_EXACT,
+            )
+        };
+        Status::from_raw(result.status).into_result()?;
+        // SAFETY: success transfers a fresh child VMAR owner.
+        let region = unsafe {
+            crate::handle::adopt_produced_handle_excluding::<crate::handle::VmarObject>(
+                result.value0,
+                &[root.raw(), memory.raw(), serial.raw()],
+            )?
+        };
+        let region_raw = region.as_handle_ref().raw().get();
+        let mut mapping = Self {
+            region: Some(region),
+            mapped: false,
+            address: base,
+        };
+        // SAFETY: this owner retains the fresh region. The kernel validates the
+        // VMO size and rights; the fixed layout fits entirely in the mapping.
+        Status::from_raw(unsafe {
+            hyper_sys::vmar_map(
+                region_raw,
+                memory.raw().get(),
+                0,
+                address,
+                size,
+                hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_READ,
+            )
+        })
+        .into_result()?;
+        mapping.mapped = true;
+        Ok(mapping)
+    }
+}
+
+impl Drop for OutputMapping {
     fn drop(&mut self) {
         let Some(region) = self.region.take() else {
             return;

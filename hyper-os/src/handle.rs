@@ -95,6 +95,7 @@ impl Rights {
     pub const LOCK_FILE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_LOCK_FILE);
     /// May change topology through a live namespace-root capability.
     pub const MANAGE_NAMESPACE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_MANAGE_NAMESPACE);
+    pub const LOCK_MEMORY: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_LOCK_MEMORY);
     pub const PROTECT: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_PROTECT);
     pub const CREATE_VIRTUAL_MACHINE: Self =
         Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_VIRTUAL_MACHINE);
@@ -181,6 +182,7 @@ const RIGHT_NAMES: &[(Rights, &str)] = &[
     (Rights::SET_ATTRIBUTES, "set-attributes"),
     (Rights::LOCK_FILE, "lock-file"),
     (Rights::PROTECT, "protect"),
+    (Rights::LOCK_MEMORY, "lock-memory"),
     (Rights::MANAGE_NAMESPACE, "manage-namespace"),
     (Rights::CREATE_VIRTUAL_MACHINE, "create-virtual-machine"),
 ];

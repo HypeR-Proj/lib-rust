@@ -323,3 +323,53 @@ pub unsafe fn vmar_map_file(
         .status
     }
 }
+
+/// Populate and retain the requested mappings, with explicit `LOCK_MEMORY` authority.
+///
+/// # Safety
+/// `vmar` must remain a live VMAR in the caller's address space.
+pub unsafe fn vmar_lock_memory(
+    vmar: u64,
+    address: u64,
+    size: u64,
+    flags: u64,
+) -> abi::HyperNativeStatus {
+    // SAFETY: The caller retains the handle; the kernel validates the range.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_VMAR_LOCK_MEMORY,
+            vmar,
+            address,
+            size,
+            flags,
+            0,
+            0,
+        )
+        .status
+    }
+}
+
+/// Release residency of the requested mappings, with explicit `LOCK_MEMORY` authority.
+///
+/// # Safety
+/// `vmar` must remain a live VMAR in the caller's address space.
+pub unsafe fn vmar_unlock_memory(
+    vmar: u64,
+    address: u64,
+    size: u64,
+    flags: u64,
+) -> abi::HyperNativeStatus {
+    // SAFETY: The caller retains the handle; the kernel validates the range.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_VMAR_UNLOCK_MEMORY,
+            vmar,
+            address,
+            size,
+            flags,
+            0,
+            0,
+        )
+        .status
+    }
+}

@@ -4,7 +4,7 @@
 //! Explicit namespace operations for bootstrap and deployment managers.
 
 use crate::fs::validate_path;
-use crate::handle::{DirectoryObject, HandleRef};
+use crate::handle::{DirectoryObject, HandleRef, OwnedHandle, Rights, RootTransitionObject};
 use crate::{Error, Result, Status};
 use hyper_abi as abi;
 
@@ -40,6 +40,43 @@ pub fn switch_root(
     // SAFETY: The wire record, move array, all borrowed strings and capability
     // remain alive until this non-retaining syscall finishes.
     check_result(unsafe { hyper_sys::filesystem_switch_root(directory.raw().get(), &wire) })
+}
+
+/// Publish a new root while retaining allocation-free rollback. Mount topology
+/// is frozen until completion. Drop the returned token before committing to
+/// restore the old root; a capability MOVE transfers that responsibility.
+pub fn begin_root_switch(
+    directory: HandleRef<'_, DirectoryObject>,
+    new_root: &str,
+    put_old: &str,
+    moves: &[(&str, &str)],
+) -> Result<OwnedHandle<RootTransitionObject>> {
+    let request = RootSwitch::new(new_root, put_old, moves)?;
+    let wire = request.wire(new_root, put_old);
+    // SAFETY: Input graph and typed root remain borrowed until return.
+    let result = unsafe { hyper_sys::filesystem_begin_root_switch(directory.raw().get(), &wire) };
+    Status::from_raw(result.status).into_result()?;
+    // SAFETY: Successful begin returns one independently owned capability.
+    let token = unsafe {
+        crate::handle::adopt_produced_handle_excluding::<RootTransitionObject>(
+            result.value0,
+            &[directory.raw()],
+        )?
+    };
+    if result.value1 != 0
+        || token.info()?.rights != Rights::WRITE.union(Rights::TRANSFER).union(Rights::INSPECT)
+    {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(token)
+}
+
+/// Finish a pending switch. Commit keeps the new root; abort restores the old
+/// root. Either choice releases the topology gate without allocation. A finished
+/// token has no further effect when closed and rejects repeated completion.
+pub fn finish_root_switch(token: HandleRef<'_, RootTransitionObject>, commit: bool) -> Result<()> {
+    // SAFETY: Token remains borrowed through the operation.
+    check_result(unsafe { hyper_sys::filesystem_finish_root_switch(token.raw().get(), commit) })
 }
 
 struct RootSwitch {

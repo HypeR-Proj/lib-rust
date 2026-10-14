@@ -6,7 +6,10 @@
 mod directory;
 mod file;
 mod namespace;
-pub use namespace::{filesystem_mount_ramfs, filesystem_switch_root};
+pub use namespace::{
+    filesystem_begin_root_switch, filesystem_finish_root_switch, filesystem_mount_ramfs,
+    filesystem_switch_root,
+};
 
 pub use directory::{
     directory_begin_read, directory_canonicalize, directory_create_directory,

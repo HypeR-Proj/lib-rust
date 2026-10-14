@@ -249,7 +249,13 @@ impl ProcessBuilder {
                 &live_inputs,
             )?
         };
-        let handle = validate_produced_handle::<ProcessBuilderObject>(owner, BUILDER_RIGHTS)?;
+        let rights = owner.info()?.rights;
+        if rights != BUILDER_RIGHTS && rights != BUILDER_RIGHTS.union(Rights::LOCK_MEMORY) {
+            return Err(Error::InvalidResponse);
+        }
+        let handle = owner
+            .downcast::<ProcessBuilderObject>()
+            .map_err(|failure| failure.error())?;
         Ok(Self {
             handle,
             data: core::cell::RefCell::new(Some(crate::launch_data::LaunchData::new())),
@@ -295,6 +301,17 @@ impl ProcessBuilder {
             .as_mut()
             .ok_or(Error::Status(Status::BAD_STATE))?
             .append(environment, true)
+    }
+
+    /// Allows the child to lock its own current mappings in RAM. The factory
+    /// used to create this builder must carry `LOCK_MEMORY`. Disabled by default;
+    /// ordinary process creation cannot manufacture this authority.
+    pub fn set_memory_lock_allowed(&self, enabled: bool) -> Result<()> {
+        Status::from_raw(raw_ops::set_memory_lock(
+            self.handle.as_handle_ref(),
+            enabled,
+        ))
+        .into_result()
     }
 
     /// Replaces the CPU affinity bitmap.
@@ -770,6 +787,14 @@ mod raw_ops {
         unsafe { hyper_launch_wait(process, channel) }
     }
 
+    pub(super) fn set_memory_lock(
+        builder: HandleRef<'_, ProcessBuilderObject>,
+        enabled: bool,
+    ) -> hyper_abi::HyperNativeStatus {
+        // SAFETY: The typed builder remains borrowed through this call.
+        unsafe { hyper_sys::process_builder_set_memory_lock(builder.raw().get(), enabled) }
+    }
+
     pub(super) fn set_affinity(
         builder: HandleRef<'_, ProcessBuilderObject>,
         words: &[u64],
@@ -914,6 +939,13 @@ mod raw_ops {
         0
     }
     pub(super) fn wait_launch(_process: u64, _channel: u64) -> hyper_abi::HyperNativeStatus {
+        0
+    }
+
+    pub(super) fn set_memory_lock(
+        _builder: HandleRef<'_, ProcessBuilderObject>,
+        _enabled: bool,
+    ) -> hyper_abi::HyperNativeStatus {
         0
     }
 

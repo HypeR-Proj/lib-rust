@@ -43,12 +43,14 @@ pub use fs::{
     directory_remove, directory_remove_if, directory_rename, directory_scope_create,
     directory_set_metadata, directory_symlink, file_get_info, file_get_metadata, file_lock,
     file_protect, file_read_at, file_resize, file_set_metadata, file_sync, file_unlock,
-    file_write_at, filesystem_mount_ramfs, filesystem_switch_root,
+    file_write_at, filesystem_begin_root_switch, filesystem_finish_root_switch,
+    filesystem_mount_ramfs, filesystem_switch_root,
 };
 pub use guest_io::{
     filesystem_mount, filesystem_unmount, guest_mailbox_create, guest_mailbox_receive,
-    guest_mailbox_send, guest_mapping_create, guest_mapping_release, guest_notification_control,
-    guest_notification_create, native_block_activate, native_block_create, native_block_transfer,
+    guest_mailbox_send, guest_mapping_create, guest_mapping_release, guest_notification_access,
+    guest_notification_configure, guest_notification_control, guest_notification_create,
+    native_block_activate, native_block_create, native_block_transfer,
 };
 pub use handle::{
     handle_close, handle_duplicate, handle_get_info, handle_replace, object_get_basic_info,
@@ -66,19 +68,19 @@ pub use ipc::{
     capability_channel_receive, capability_channel_try_send,
 };
 pub use memory::{
-    vmar_allocate, vmar_destroy, vmar_map, vmar_map_file, vmar_map_private, vmar_protect,
-    vmar_unmap, vmo_create, vmo_create_contiguous, vmo_create_snapshot, vmo_get_dma_extent,
-    vmo_read, vmo_write,
+    vmar_allocate, vmar_destroy, vmar_lock_memory, vmar_map, vmar_map_file, vmar_map_private,
+    vmar_protect, vmar_unlock_memory, vmar_unmap, vmo_create, vmo_create_contiguous,
+    vmo_create_snapshot, vmo_get_dma_extent, vmo_read, vmo_write,
 };
 pub use startup::{AuxiliaryEntry, RawStartup, startup_find_handle};
 pub use system::{abi_query, clock_get_monotonic, clock_get_realtime, system_config};
 pub use task::{
     process_builder_abort, process_builder_add_handle, process_builder_create,
     process_builder_seal, process_builder_set_affinity, process_builder_set_data,
-    process_builder_set_name, process_builder_start, process_derive_observer, process_exit,
-    process_get_current_id, process_get_info, process_request_stop, resource_domain_create,
-    task_group_create, task_group_request_stop, thread_create, thread_exit, thread_request_stop,
-    thread_sleep, thread_start, thread_yield,
+    process_builder_set_memory_lock, process_builder_set_name, process_builder_start,
+    process_derive_observer, process_exit, process_get_current_id, process_get_info,
+    process_request_stop, resource_domain_create, task_group_create, task_group_request_stop,
+    thread_create, thread_exit, thread_request_stop, thread_sleep, thread_start, thread_yield,
 };
 pub use vm::{
     guest_memory_create, pending_virtual_machine_abort, pending_virtual_machine_assign_device,

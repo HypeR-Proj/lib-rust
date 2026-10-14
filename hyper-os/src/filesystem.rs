@@ -3,7 +3,7 @@
 
 //! Filesystem server transport registration and owned shared-buffer mappings.
 mod namespace;
-pub use namespace::{mount_ramfs, switch_root};
+pub use namespace::{begin_root_switch, finish_root_switch, mount_ramfs, switch_root};
 
 use crate::{
     Error, Result, Status,
@@ -53,7 +53,7 @@ pub fn unmount(directory: HandleRef<'_, DirectoryObject>, path: &str) -> Result<
 /// A fixed mapping owned independently of the root VMAR. Closing does not run
 /// remote callbacks; final process teardown also retires failed unmap attempts.
 pub struct SharedBuffer {
-    memory: WritableVmo,
+    memory: OwnedHandle<VmoObject>,
     region: OwnedHandle<VmarObject>,
     address: usize,
     size: usize,
@@ -61,7 +61,22 @@ pub struct SharedBuffer {
 }
 impl SharedBuffer {
     pub fn create(root: HandleRef<'_, VmarObject>, size: usize) -> Result<Self> {
-        let memory = WritableVmo::create(size as u64)?;
+        Self::from_memory(root, WritableVmo::create(size as u64)?.into_handle(), size)
+    }
+
+    /// Map an existing transport buffer without replacing its shared backing.
+    /// The kernel checks the VMO extent and mapping rights before publication.
+    pub fn from_memory(
+        root: HandleRef<'_, VmarObject>,
+        memory: OwnedHandle<VmoObject>,
+        size: usize,
+    ) -> Result<Self> {
+        if size == 0
+            || size > isize::MAX as usize
+            || !size.is_multiple_of(crate::memory::PAGE_SIZE as usize)
+        {
+            return Err(Error::InvalidMemoryRange);
+        }
         // SAFETY: Root is current process authority; zero hint asks the kernel
         // to reserve one free interval atomically rather than replacing mappings.
         let result = unsafe { hyper_sys::vmar_allocate(root.raw().get(), 0, size as u64, 0) };
@@ -100,7 +115,7 @@ impl SharedBuffer {
         buffer.mapped = true;
         Ok(buffer)
     }
-    pub fn memory(&self) -> &WritableVmo {
+    pub fn memory(&self) -> &OwnedHandle<VmoObject> {
         &self.memory
     }
     /// # Safety

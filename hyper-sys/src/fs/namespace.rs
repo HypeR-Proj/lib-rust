@@ -47,3 +47,44 @@ pub unsafe fn filesystem_switch_root(
         )
     }
 }
+
+/// Publish a reversible root switch, returning a linear transition token.
+///
+/// # Safety
+/// Keep the capability and the complete request graph live until return.
+pub unsafe fn filesystem_begin_root_switch(
+    directory: u64,
+    request: *const abi::HyperNativeFilesystemRootSwitch,
+) -> CallResult {
+    // SAFETY: The caller establishes input lifetimes; output transfers ownership.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_FILESYSTEM_BEGIN_ROOT_SWITCH,
+            directory,
+            request as u64,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
+/// Commit or abort a pending root switch. Repeated completion fails.
+///
+/// # Safety
+/// `token` must remain live with WRITE authority until return.
+pub unsafe fn filesystem_finish_root_switch(token: u64, commit: bool) -> CallResult {
+    // SAFETY: The caller retains the non-retaining input capability.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_FILESYSTEM_FINISH_ROOT_SWITCH,
+            token,
+            u64::from(commit),
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}

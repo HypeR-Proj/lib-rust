@@ -250,6 +250,12 @@ object_types!(
         "directory enumeration"
     ),
     (
+        RootTransitionObject,
+        HYPER_NATIVE_OBJECT_ROOT_TRANSITION,
+        "root-transition",
+        "reversible namespace publication"
+    ),
+    (
         FileProtectionObject,
         HYPER_NATIVE_OBJECT_FILE_PROTECTION,
         "file-protection",

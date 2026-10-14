@@ -266,3 +266,53 @@ pub unsafe fn guest_mapping_release(mapping: u64) -> CallResult {
         )
     }
 }
+
+/// Configures the frontend decode of an existing notification route.
+///
+/// # Safety
+/// The VM handle must remain valid through this non-retaining call.
+#[inline]
+pub unsafe fn guest_notification_configure(
+    machine: u64,
+    original_base: u64,
+    base: u64,
+    flags: u32,
+) -> CallResult {
+    // SAFETY: The caller retains the machine handle for the complete call.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_GUEST_NOTIFICATION_CONFIGURE,
+            machine,
+            original_base,
+            base,
+            u64::from(flags),
+            0,
+            0,
+        )
+    }
+}
+
+/// Operate the admitted frontend notification state for a userspace transport.
+///
+/// # Safety
+/// The VM handle must remain valid through this non-retaining scalar call.
+#[inline]
+pub unsafe fn guest_notification_access(
+    machine: u64,
+    original_base: u64,
+    operation: u32,
+    value: u32,
+) -> CallResult {
+    // SAFETY: The caller retains the machine handle for the complete call.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_GUEST_NOTIFICATION_ACCESS,
+            machine,
+            original_base,
+            u64::from(operation),
+            u64::from(value),
+            0,
+            0,
+        )
+    }
+}

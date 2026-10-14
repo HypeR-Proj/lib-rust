@@ -158,3 +158,25 @@ With the optional `hyper-os/std` feature on HypeR targets,
 `std::fs::File` without reopening or duplicating it. The standard file owns
 close, starts at offset zero, and preserves the original rights. Subsequent
 I/O uses std; Native capability acquisition and delegation remain explicit.
+
+## Explicit memory residency
+
+`hyper_os::memory::{lock_memory, unlock_memory}` operate on a nonempty,
+page-aligned interval of the calling process's VMAR. The corresponding
+`lock_current_memory` / `unlock_current_memory` functions select all existing
+mappings in the VMAR, including descendants and excluding guard holes. New
+mappings are never implicitly locked. Locking populates the selected memory;
+a failed transaction leaves existing residency grants unchanged, though reads
+may have warmed the file cache.
+
+The VMAR requires `LOCK_MEMORY`, independently of `MAP`. A launcher whose task
+factory carries that right can call `ProcessBuilder::set_memory_lock_allowed`
+explicitly; it is disabled for newly created builders. Lock quota belongs to
+the requesting resource domain. Unmap and process exit release residency;
+unlock never cancels another mapping's claim. Shared clean file-backed pages
+remain available to other mappings while locked, but COW remains private.
+This provides no stable physical address and is separate from device DMA pins.
+
+A service must prepare its dependency closure before announcing readiness if
+refaulting could require its own suspended predecessor. That policy belongs to
+the service and its configuration, not to the loader or kernel.

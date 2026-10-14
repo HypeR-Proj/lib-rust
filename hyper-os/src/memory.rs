@@ -6,6 +6,8 @@
 use crate::handle::{AnyObject, HandleRef, OwnedHandle, Rights, VmoObject};
 
 mod private;
+mod residency;
+pub use residency::{lock_current_memory, lock_memory, unlock_current_memory, unlock_memory};
 mod shared;
 use crate::{Error, Result, Status};
 pub use private::{
