@@ -47,8 +47,9 @@ pub use fs::{
     filesystem_mount_ramfs, filesystem_switch_root,
 };
 pub use guest_io::{
-    filesystem_mount, filesystem_unmount, guest_mailbox_create, guest_mailbox_receive,
-    guest_mailbox_send, guest_mapping_create, guest_mapping_release, guest_notification_access,
+    filesystem_mount, filesystem_unmount, guest_interrupt_create, guest_interrupt_set_level,
+    guest_mailbox_create, guest_mailbox_receive, guest_mailbox_send, guest_mapping_create,
+    guest_mapping_release, guest_memory_scalar, guest_memory_transfer, guest_notification_access,
     guest_notification_configure, guest_notification_control, guest_notification_create,
     native_block_activate, native_block_create, native_block_transfer,
 };

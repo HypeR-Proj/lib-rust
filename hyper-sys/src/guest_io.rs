@@ -316,3 +316,91 @@ pub unsafe fn guest_notification_access(
         )
     }
 }
+
+/// Copies at most 4096 bytes to/from explicitly delegated guest backing.
+///
+/// # Safety
+/// Handles and the pointer range must satisfy the Native ABI for this call.
+pub unsafe fn guest_memory_transfer(
+    memory: u64,
+    operation: u32,
+    offset: u64,
+    buffer: *mut u8,
+    length: usize,
+) -> CallResult {
+    // SAFETY: The caller supplies valid borrowed handles and a bounded buffer.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_GUEST_MEMORY_TRANSFER,
+            memory,
+            u64::from(operation),
+            offset,
+            buffer as u64,
+            length as u64,
+            0,
+        )
+    }
+}
+
+/// Accesses one aligned guest word, with acquire-load or release/store-fence ordering.
+///
+/// # Safety
+/// Retain a `GuestMemory` handle with the operation's required rights.
+pub unsafe fn guest_memory_scalar(
+    memory: u64,
+    operation: u32,
+    offset: u64,
+    width: u32,
+    value: u64,
+) -> CallResult {
+    // SAFETY: The caller supplies a valid borrowed handle; remaining inputs are scalar.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_GUEST_MEMORY_SCALAR,
+            memory,
+            u64::from(operation),
+            offset,
+            u64::from(width),
+            value,
+            0,
+        )
+    }
+}
+
+/// Reserves a guest level interrupt without assigning a device model to the kernel.
+///
+/// # Safety
+/// Retain the borrowed `VirtualMachine` WRITE handle.
+pub unsafe fn guest_interrupt_create(machine: u64, irq: u32) -> CallResult {
+    // SAFETY: The caller supplies the borrowed handle and scalar IRQ identity.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_GUEST_INTERRUPT_CREATE,
+            machine,
+            u64::from(irq),
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
+/// Changes the level of an exclusively owned guest interrupt.
+///
+/// # Safety
+/// Retain the borrowed `GuestInterrupt` WRITE handle.
+pub unsafe fn guest_interrupt_set_level(interrupt: u64, asserted: bool) -> CallResult {
+    // SAFETY: The caller supplies the borrowed handle; level is a canonical boolean.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_GUEST_INTERRUPT_SET_LEVEL,
+            interrupt,
+            u64::from(asserted),
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}

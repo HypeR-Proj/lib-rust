@@ -202,6 +202,12 @@ object_types!(
         "wait registration set"
     ),
     (
+        GuestInterruptObject,
+        HYPER_NATIVE_OBJECT_GUEST_INTERRUPT,
+        "guest-interrupt",
+        "exclusive guest interrupt line"
+    ),
+    (
         GuestMemoryObject,
         HYPER_NATIVE_OBJECT_GUEST_MEMORY,
         "guest-memory",

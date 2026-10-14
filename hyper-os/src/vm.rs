@@ -900,7 +900,7 @@ pub fn complete_mmio(
     .into_result()
 }
 
-/// Freezes the VMO against Native writes and snapshots while any guest-memory
+/// Freezes the VMO against direct VMO writes and snapshots while any guest-memory
 /// capability or installed guest mapping retains it. Physical backing remains
 /// stable across sharing and source-handle closure.
 pub fn create_guest_memory(
@@ -916,6 +916,8 @@ pub fn create_guest_memory(
         result.value0,
         Rights::TRANSFER
             .union(Rights::DUPLICATE)
+            .union(Rights::READ)
+            .union(Rights::WRITE)
             .union(Rights::MAP)
             .union(Rights::INSPECT),
         &[vmo.raw()],
@@ -1016,4 +1018,77 @@ pub fn map_shared_guest_memory(
             .map_err(|failure| failure.error())?,
         token: result.value1,
     })
+}
+
+/// Reads a bounded portion of delegated guest backing. This is not an atomic
+/// snapshot; use `load_guest_memory` for queue publication words.
+pub fn read_guest_memory(
+    memory: HandleRef<'_, crate::handle::GuestMemoryObject>,
+    offset: u64,
+    bytes: &mut [u8],
+) -> Result<()> {
+    // SAFETY: The writable slice and READ capability remain borrowed for the call.
+    let result = unsafe {
+        hyper_sys::guest_memory_transfer(
+            memory.raw().get(),
+            0,
+            offset,
+            bytes.as_mut_ptr(),
+            bytes.len(),
+        )
+    };
+    guest_memory_status(result)
+}
+/// Writes at most 4096 bytes. A failed transfer may have partial guest-visible
+/// effects; callers must publish queue indices only after successful writes.
+pub fn write_guest_memory(
+    memory: HandleRef<'_, crate::handle::GuestMemoryObject>,
+    offset: u64,
+    bytes: &[u8],
+) -> Result<()> {
+    // SAFETY: Operation 1 only reads this pointer range; WRITE authority is retained.
+    let result = unsafe {
+        hyper_sys::guest_memory_transfer(
+            memory.raw().get(),
+            1,
+            offset,
+            bytes.as_ptr().cast_mut(),
+            bytes.len(),
+        )
+    };
+    guest_memory_status(result)
+}
+/// Acquire-loads one naturally aligned 1, 2, 4 or 8 byte guest word.
+pub fn load_guest_memory(
+    memory: HandleRef<'_, crate::handle::GuestMemoryObject>,
+    offset: u64,
+    width: u32,
+) -> Result<u64> {
+    // SAFETY: The READ capability remains borrowed; all other inputs are scalar.
+    let result = unsafe { hyper_sys::guest_memory_scalar(memory.raw().get(), 0, offset, width, 0) };
+    Status::from_raw(result.status).into_result()?;
+    if result.value1 != 0 {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(result.value0)
+}
+/// Release-stores a naturally aligned guest word, then executes a full memory
+/// fence. A subsequent suppression-flags load cannot precede this publication.
+pub fn store_guest_memory(
+    memory: HandleRef<'_, crate::handle::GuestMemoryObject>,
+    offset: u64,
+    width: u32,
+    value: u64,
+) -> Result<()> {
+    // SAFETY: The WRITE capability remains borrowed; all other inputs are scalar.
+    let result =
+        unsafe { hyper_sys::guest_memory_scalar(memory.raw().get(), 1, offset, width, value) };
+    guest_memory_status(result)
+}
+fn guest_memory_status(result: hyper_sys::CallResult) -> Result<()> {
+    Status::from_raw(result.status).into_result()?;
+    if result.value0 != 0 || result.value1 != 0 {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(())
 }

@@ -236,3 +236,42 @@ pub fn access_frontend(
     }
     u32::try_from(result.value0).map_err(|_| Error::InvalidResponse)
 }
+
+/// An exclusive, transferable guest level source. Closing the last owner
+/// deasserts the line; its number stays reserved until that VM retires.
+pub struct Interrupt {
+    handle: OwnedHandle<crate::handle::GuestInterruptObject>,
+}
+impl Interrupt {
+    pub fn create(machine: HandleRef<'_, VirtualMachineObject>, irq: u32) -> Result<Self> {
+        // SAFETY: The machine remains borrowed throughout creation.
+        let result = unsafe { hyper_sys::guest_interrupt_create(machine.raw().get(), irq) };
+        Ok(Self {
+            handle: adopt_created(
+                result,
+                Rights::WRITE.union(Rights::TRANSFER).union(Rights::INSPECT),
+                &[machine.raw()],
+            )?,
+        })
+    }
+    pub fn from_handle(handle: OwnedHandle<crate::handle::GuestInterruptObject>) -> Self {
+        Self { handle }
+    }
+    pub fn into_handle(self) -> OwnedHandle<crate::handle::GuestInterruptObject> {
+        self.handle
+    }
+    pub fn as_handle_ref(&self) -> HandleRef<'_, crate::handle::GuestInterruptObject> {
+        self.handle.as_handle_ref()
+    }
+    pub fn set_level(&self, asserted: bool) -> Result<()> {
+        // SAFETY: The source handle remains borrowed through this scalar operation.
+        let result = unsafe {
+            hyper_sys::guest_interrupt_set_level(self.handle.as_handle_ref().raw().get(), asserted)
+        };
+        Status::from_raw(result.status).into_result()?;
+        if result.value0 != 0 || result.value1 != 0 {
+            return Err(Error::InvalidResponse);
+        }
+        Ok(())
+    }
+}
