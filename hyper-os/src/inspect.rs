@@ -8,6 +8,7 @@
 //! lookup which converts an observed identifier into authority.
 
 mod details;
+pub mod memory;
 pub use details::{
     DetailCursor, DetailRecord, DetailTarget, DeviceState, MappingPermissions, ObjectDetails,
     UserThreadPhase,

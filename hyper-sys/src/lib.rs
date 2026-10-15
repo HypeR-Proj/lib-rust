@@ -58,11 +58,12 @@ pub use handle::{
 };
 pub use hyper_abi as abi;
 pub use inspect::{
-    cpu_inspector_read, memory_inspector_read, object_inspector_derive_process,
-    object_inspector_derive_resource_domain, object_inspector_derive_task_group,
-    object_inspector_read_details, object_inspector_scan_handles, object_inspector_scan_objects,
-    task_inspector_derive_process, task_inspector_derive_resource_domain,
-    task_inspector_derive_task_group, task_inspector_scan_processes, task_inspector_scan_threads,
+    cpu_inspector_read, memory_inspector_read, memory_inspector_read_statistics,
+    object_inspector_derive_process, object_inspector_derive_resource_domain,
+    object_inspector_derive_task_group, object_inspector_read_details,
+    object_inspector_scan_handles, object_inspector_scan_objects, task_inspector_derive_process,
+    task_inspector_derive_resource_domain, task_inspector_derive_task_group,
+    task_inspector_scan_processes, task_inspector_scan_threads,
 };
 pub use ipc::{
     byte_channel_create, byte_channel_read, byte_channel_write, capability_channel_create,

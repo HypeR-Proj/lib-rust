@@ -249,3 +249,29 @@ pub unsafe fn object_inspector_read_details(
         )
     }
 }
+
+/// Reads one topic-specific memory diagnostic record.
+///
+/// # Safety
+/// `record` must designate `size` writable bytes and the inspector must remain
+/// live. The topic selects the ABI record layout; no pointer is retained.
+pub unsafe fn memory_inspector_read_statistics(
+    inspector: abi::HyperNativeHandle,
+    topic: u32,
+    index: u32,
+    record: *mut u8,
+    size: usize,
+) -> CallResult {
+    // SAFETY: The caller owns the output buffer contract above.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_MEMORY_INSPECTOR_READ_STATISTICS,
+            inspector,
+            topic as u64,
+            index as u64,
+            record.addr() as u64,
+            size as u64,
+            0,
+        )
+    }
+}
