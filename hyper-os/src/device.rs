@@ -37,7 +37,8 @@ pub fn claim(
         Rights::TRANSFER
             .union(Rights::DUPLICATE)
             .union(Rights::INSPECT)
-            .union(Rights::ASSIGN_DEVICE),
+            .union(Rights::ASSIGN_DEVICE)
+            .union(Rights::WAIT),
         &[authority.raw()],
     )
 }
@@ -115,10 +116,15 @@ pub fn claim_matching(
         Rights::TRANSFER
             .union(Rights::DUPLICATE)
             .union(Rights::INSPECT)
-            .union(Rights::ASSIGN_DEVICE),
+            .union(Rights::ASSIGN_DEVICE)
+            .union(Rights::WAIT),
         &[authority.raw()],
     )
 }
+
+#[path = "device/fault.rs"]
+mod fault;
+pub use fault::{DmaFault, DmaFaultScope, dma_fault};
 
 #[path = "device/profile.rs"]
 mod profile;

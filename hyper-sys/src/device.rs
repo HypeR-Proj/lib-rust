@@ -52,6 +52,28 @@ pub unsafe fn device_claim_matching(
     }
 }
 
+/// Queries retained DMA fault evidence without acknowledging it.
+///
+/// # Safety
+/// Output must be writable for `size` bytes and the handle must stay live.
+pub unsafe fn device_dma_fault_info(
+    device: u64,
+    output: *mut abi::HyperNativeDeviceDmaFaultInfo,
+    size: usize,
+) -> CallResult {
+    // SAFETY: Caller establishes the handle and output buffer contracts.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_DEVICE_DMA_FAULT_INFO,
+            device,
+            output as u64,
+            size as u64,
+            0,
+            0,
+            0,
+        )
+    }
+}
 /// Queries the immutable validated assignment profile.
 ///
 /// # Safety

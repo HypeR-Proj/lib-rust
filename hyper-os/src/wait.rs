@@ -368,6 +368,9 @@ impl ObjectSignals<crate::handle::GuestNotificationObject> {
 }
 
 impl ObjectSignals<crate::handle::PhysicalDeviceObject> {
+    /// Sticky first DMA fault; query `device::dma_fault`, then stop waiting on this bit.
+    pub const DMA_FAULT: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_PHYSICAL_DEVICE_DMA_FAULT);
     /// A newly delivered masked physical IRQ awaits userspace notification handling.
     /// Completing with asserted=true consumes readiness while retaining its sequence.
     pub const READABLE: Self =

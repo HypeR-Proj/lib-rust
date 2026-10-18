@@ -32,9 +32,9 @@ pub use console::{
     virtual_serial_create, virtual_serial_register_output, virtual_serial_write,
 };
 pub use device::{
-    device_claim, device_claim_bundle, device_claim_matching, device_firmware_read,
-    device_irq_complete, device_irq_pending, device_mmio, device_profile_info,
-    device_resource_info, physical_device_info,
+    device_claim, device_claim_bundle, device_claim_matching, device_dma_fault_info,
+    device_firmware_read, device_irq_complete, device_irq_pending, device_mmio,
+    device_profile_info, device_resource_info, physical_device_info,
 };
 pub use fs::{
     directory_begin_read, directory_canonicalize, directory_create_directory,
