@@ -7,6 +7,21 @@ use crate::handle::{AnyObject, HandleRef, OwnedHandle, ThreadObject};
 use crate::{Result, Status};
 use core::sync::atomic::AtomicU32;
 
+/// Sets the calling thread's kernel-visible diagnostic name (for example in `ps`).
+///
+/// Names must contain 1..=64 UTF-8 bytes and no control characters. Invalid
+/// names leave the old name intact. No extra capability is required; other
+/// threads and the process name are unaffected. This does not change Rust's
+/// creation-time [`std::thread::Thread::name`] metadata. For new Rust threads,
+/// prefer `std::thread::Builder::name`, which also publishes the kernel name.
+///
+/// [`std::thread::Thread::name`]: https://doc.rust-lang.org/std/thread/struct.Thread.html#method.name
+pub fn set_current_name(name: &str) -> Result<()> {
+    // SAFETY: the string remains readable for the duration of the syscall.
+    Status::from_raw(unsafe { hyper_sys::thread_set_current_name(name.as_ptr(), name.len()) })
+        .into_result()
+}
+
 /// Prepares a dormant thread inheriting the calling thread's CPU affinity.
 ///
 /// # Safety

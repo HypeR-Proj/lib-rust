@@ -88,7 +88,8 @@ pub use task::{
     process_builder_set_memory_lock, process_builder_set_name, process_builder_start,
     process_derive_observer, process_exit, process_get_current_id, process_get_info,
     process_request_stop, resource_domain_create, task_group_create, task_group_request_stop,
-    thread_create, thread_exit, thread_request_stop, thread_sleep, thread_start, thread_yield,
+    thread_create, thread_exit, thread_request_stop, thread_set_current_name, thread_sleep,
+    thread_start, thread_yield,
 };
 pub use vm::{
     guest_memory_create, pending_virtual_machine_abort, pending_virtual_machine_assign_device,

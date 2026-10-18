@@ -9,6 +9,27 @@ use crate::ffi::{
 };
 use crate::{CallResult, abi};
 
+/// Replaces only the calling thread's diagnostic name.
+///
+/// # Safety
+/// `name` must identify `length` readable bytes until this call returns.
+#[inline]
+pub unsafe fn thread_set_current_name(name: *const u8, length: usize) -> abi::HyperNativeStatus {
+    // SAFETY: the caller establishes the borrowed input's lifetime.
+    unsafe {
+        ffi_native_call6(
+            abi::HYPER_NATIVE_SYS_THREAD_SET_CURRENT_NAME,
+            name as u64,
+            length as u64,
+            0,
+            0,
+            0,
+            0,
+        )
+        .status
+    }
+}
+
 /// Creates an independently accounted child resource domain.
 ///
 /// # Safety
