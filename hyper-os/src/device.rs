@@ -25,6 +25,7 @@ pub struct DmaExtent {
 
 /// Claims one firmware-enumerated, unbound device. The index is a discovery
 /// selector, never an arbitrary physical address or interrupt number.
+/// Requires `ASSIGN_DEVICE` on the assignment authority.
 pub fn claim(
     authority: HandleRef<'_, DeviceAssignmentAuthorityObject>,
     index: u32,
@@ -36,7 +37,7 @@ pub fn claim(
         Rights::TRANSFER
             .union(Rights::DUPLICATE)
             .union(Rights::INSPECT)
-            .union(Rights::WRITE),
+            .union(Rights::ASSIGN_DEVICE),
         &[authority.raw()],
     )
 }
@@ -60,6 +61,8 @@ pub const MAX_ASSIGNED_DEVICES: usize =
 /// Resource kinds and attributes returned by device inspection.
 pub const RESOURCE_PCI_ECAM: u32 = hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_ECAM as u32;
 pub const RESOURCE_PCI_MSI: u32 = hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_MSI as u32;
+/// A level interrupt routed by the host; no MSI-controller aperture is exposed.
+pub const RESOURCE_PCI_INTX: u32 = hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_INTX as u32;
 pub const RESOURCE_PCI_BAR0: u32 = hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_BAR0 as u32;
 pub const RESOURCE_MEMORY_64: u32 = hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_MEMORY_64 as u32;
 pub const RESOURCE_PREFETCHABLE: u32 = hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PREFETCHABLE as u32;
@@ -73,6 +76,7 @@ pub enum FirmwareIdentity<'a> {
 
 /// Claims a unique profile/firmware match. Ambiguous selectors fail instead of
 /// falling back to a different device when the first match is already claimed.
+/// Requires `ASSIGN_DEVICE`; an `INSPECT` duplicate cannot claim.
 pub fn claim_matching(
     authority: HandleRef<'_, DeviceAssignmentAuthorityObject>,
     profile: Profile,
@@ -111,7 +115,7 @@ pub fn claim_matching(
         Rights::TRANSFER
             .union(Rights::DUPLICATE)
             .union(Rights::INSPECT)
-            .union(Rights::WRITE),
+            .union(Rights::ASSIGN_DEVICE),
         &[authority.raw()],
     )
 }
@@ -164,6 +168,7 @@ fn decode_info(record: hyper_abi::HyperNativePhysicalDeviceInfo) -> Result<Info>
 }
 
 /// Inspects an already resident contiguous extent for constructing DMA metadata.
+/// Requires `MAP_DMA` on the authority and `READ | MAP` on the VMO.
 /// The caller must retain the VMO. This does not enable DMA or replace the
 /// frozen guest-memory grants required when attaching a device to a VM.
 pub fn dma_extent(

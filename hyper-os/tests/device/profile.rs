@@ -25,6 +25,48 @@ fn bar_record() -> hyper_abi::HyperNativeDeviceResourceInfo {
 }
 
 #[test]
+fn intx_is_an_interrupt_descriptor_not_a_zero_length_register_window() -> Result<()> {
+    let profile = decode_profile(hyper_abi::HyperNativeDeviceProfileInfo {
+        interrupt_count: 1,
+        ..pci_record()
+    })?;
+    let record = hyper_abi::HyperNativeDeviceResourceInfo {
+        kind: hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_INTX as u32,
+        flags: 0,
+        offset: 0,
+        length: 0,
+        bus_address: 0,
+    };
+    assert!(decode_resource(profile, record).is_ok());
+    assert!(decode_resource(decode_profile(pci_record())?, record).is_err());
+    for invalid in [
+        hyper_abi::HyperNativeDeviceResourceInfo {
+            kind: 0x100,
+            ..record
+        },
+        hyper_abi::HyperNativeDeviceResourceInfo {
+            length: 4096,
+            ..record
+        },
+        hyper_abi::HyperNativeDeviceResourceInfo { flags: 1, ..record },
+        hyper_abi::HyperNativeDeviceResourceInfo {
+            offset: 4096,
+            ..record
+        },
+        hyper_abi::HyperNativeDeviceResourceInfo {
+            bus_address: 4096,
+            ..record
+        },
+    ] {
+        assert_eq!(
+            decode_resource(profile, invalid),
+            Err(Error::InvalidResponse)
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn profile_decoding_distinguishes_bus_metadata_from_mmio_profiles() -> Result<()> {
     let pci = decode_profile(pci_record())?;
     assert_eq!(pci.profile, Profile::PciFunction);

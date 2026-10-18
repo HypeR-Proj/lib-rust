@@ -144,7 +144,10 @@ pub fn claim_bundle(
         Rights::TRANSFER
             .union(Rights::DUPLICATE)
             .union(Rights::INSPECT)
+            .union(Rights::READ)
             .union(Rights::WRITE)
+            .union(Rights::ASSIGN_DEVICE)
+            .union(Rights::ACK_INTERRUPT)
             .union(Rights::WAIT),
         &[authority.raw()],
     )
@@ -158,7 +161,7 @@ fn result_value(result: hyper_sys::CallResult) -> Result<u64> {
     }
     Ok(result.value0)
 }
-/// Reads require an active assignment with retained DMA backing: even reads
+/// Reads require `READ` and an active assignment with retained DMA backing: even reads
 /// may have device-specific side effects. Perform capability checks after install.
 pub fn mmio_read(
     device: HandleRef<'_, PhysicalDeviceObject>,
@@ -168,7 +171,7 @@ pub fn mmio_read(
     // SAFETY: typed capability stays live; kernel validates alignment/window/width.
     result_value(unsafe { hyper_sys::device_mmio(device.raw().get(), offset, width, 0, 0) })
 }
-/// Writes require an active assignment whose DMA backing is retained by the kernel.
+/// Writes require `WRITE` and an active assignment with kernel-retained DMA backing.
 pub fn mmio_write(
     device: HandleRef<'_, PhysicalDeviceObject>,
     offset: u64,
@@ -188,7 +191,8 @@ pub fn irq_pending(device: HandleRef<'_, PhysicalDeviceObject>) -> Result<u64> {
     // SAFETY: the typed device remains borrowed for the call.
     result_value(unsafe { hyper_sys::device_irq_pending(device.raw().get()) })
 }
-/// Updates the bound guest level. False acknowledges/rearms the physical IRQ;
+/// Requires `ACK_INTERRUPT`. Updates the bound guest level.
+/// False acknowledges/rearms the physical IRQ;
 /// true retains its masked pending sequence but consumes READABLE notification.
 /// The same sequence remains queryable for a later register-write resampling.
 /// BUSY means reread the sequence.

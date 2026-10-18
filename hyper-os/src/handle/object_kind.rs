@@ -279,6 +279,12 @@ object_types!(
         "file-protection",
         "process-local content protection"
     ),
+    (
+        BackendMemoryLeaseObject,
+        HYPER_NATIVE_OBJECT_BACKEND_MEMORY_LEASE,
+        "backend-memory-lease",
+        "kernel-owned backend DMA memory lease"
+    ),
 );
 
 impl ObjectKind {

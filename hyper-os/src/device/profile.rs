@@ -126,7 +126,9 @@ fn decode_resource(
     profile: ProfileInfo,
     record: hyper_abi::HyperNativeDeviceResourceInfo,
 ) -> Result<ResourceInfo> {
-    if record.length == 0
+    let intx = profile.profile == Profile::PciFunction
+        && u64::from(record.kind) == hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_INTX;
+    if (record.length == 0 && !intx)
         || record
             .offset
             .checked_add(record.length)
@@ -136,6 +138,12 @@ fn decode_resource(
     }
     if profile.profile == Profile::PciFunction {
         match u64::from(record.kind) {
+            hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_INTX
+                if profile.interrupt_count == 1
+                    && record.offset == 0
+                    && record.length == 0
+                    && record.flags == 0
+                    && record.bus_address == 0 => {}
             hyper_abi::HYPER_NATIVE_DEVICE_RESOURCE_PCI_ECAM
                 if record.offset == 0
                     && record.length == 0x10_0000
