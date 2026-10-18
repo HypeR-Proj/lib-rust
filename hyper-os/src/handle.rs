@@ -96,6 +96,9 @@ impl Rights {
     /// May change topology through a live namespace-root capability.
     pub const MANAGE_NAMESPACE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_MANAGE_NAMESPACE);
     pub const LOCK_MEMORY: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_LOCK_MEMORY);
+    /// May configure bounded diagnostic retention for a child before start.
+    pub const RETAIN_PROCESS: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_RETAIN_PROCESS);
+    pub const RETIRE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_RETIRE);
     pub const PROTECT: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_PROTECT);
     pub const CREATE_VIRTUAL_MACHINE: Self =
         Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_VIRTUAL_MACHINE);
@@ -183,6 +186,8 @@ const RIGHT_NAMES: &[(Rights, &str)] = &[
     (Rights::LOCK_FILE, "lock-file"),
     (Rights::PROTECT, "protect"),
     (Rights::LOCK_MEMORY, "lock-memory"),
+    (Rights::RETAIN_PROCESS, "retain-process"),
+    (Rights::RETIRE, "retire"),
     (Rights::MANAGE_NAMESPACE, "manage-namespace"),
     (Rights::CREATE_VIRTUAL_MACHINE, "create-virtual-machine"),
 ];

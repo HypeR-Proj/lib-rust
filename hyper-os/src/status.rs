@@ -9,6 +9,8 @@ use crate::{Error, Result};
 pub struct Status(hyper_abi::HyperNativeStatus);
 
 impl Status {
+    /// The supervisor released a diagnostic scene; this view cannot revive it.
+    pub const REVOKED: Self = Self(hyper_abi::HYPER_NATIVE_STATUS_REVOKED);
     pub const OK: Self = Self(hyper_abi::HYPER_NATIVE_STATUS_OK);
     pub const INVALID_ARGUMENT: Self = Self(hyper_abi::HYPER_NATIVE_STATUS_INVALID_ARGUMENT);
     pub const BAD_HANDLE: Self = Self(hyper_abi::HYPER_NATIVE_STATUS_BAD_HANDLE);

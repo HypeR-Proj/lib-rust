@@ -97,6 +97,13 @@ impl ObjectSignals<crate::handle::TaskGroupObject> {
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_TASK_GROUP_TERMINATED);
 }
 
+impl ObjectSignals<crate::handle::ProcessRetirementObject> {
+    pub const READY: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_PROCESS_RETIREMENT_READY);
+    pub const RELEASED: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_PROCESS_RETIREMENT_RELEASED);
+}
+
 impl ObjectSignals<ProcessObject> {
     pub const TERMINATED: Self =
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_PROCESS_TERMINATED);

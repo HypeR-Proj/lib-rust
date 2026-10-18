@@ -11,6 +11,8 @@ use crate::handle::{
 };
 use crate::{Error, Result, Status};
 
+pub use crate::retirement::ProcessRetirement;
+
 const _: () = assert!(hyper_abi::HYPER_NATIVE_PROCESS_NAME_MAX_BYTES <= usize::MAX as u64);
 const _: () = assert!(hyper_abi::HYPER_NATIVE_PROCESS_AFFINITY_MAX_WORDS <= usize::MAX as u64);
 
@@ -250,7 +252,12 @@ impl ProcessBuilder {
             )?
         };
         let rights = owner.info()?.rights;
-        if rights != BUILDER_RIGHTS && rights != BUILDER_RIGHTS.union(Rights::LOCK_MEMORY) {
+        if !rights.contains(BUILDER_RIGHTS)
+            || !BUILDER_RIGHTS
+                .union(Rights::LOCK_MEMORY)
+                .union(Rights::RETAIN_PROCESS)
+                .contains(rights)
+        {
             return Err(Error::InvalidResponse);
         }
         let handle = owner
@@ -301,6 +308,15 @@ impl ProcessBuilder {
             .as_mut()
             .ok_or(Error::Status(Status::BAD_STATE))?
             .append(environment, true)
+    }
+
+    /// Arms bounded post-exit observation before this child is started.
+    ///
+    /// Only a factory carrying `RETAIN_PROCESS` grants this authority. The
+    /// returned controller belongs to the external supervisor, never the child.
+    /// Closing it permits cleanup; observations cannot extend that obligation.
+    pub fn retain_on_exit(&self, max_bytes: u64, timeout_ns: u64) -> Result<ProcessRetirement> {
+        crate::retirement::retain(self.handle.as_handle_ref(), max_bytes, timeout_ns)
     }
 
     /// Allows the child to lock its own current mappings in RAM. The factory

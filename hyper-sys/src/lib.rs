@@ -20,6 +20,7 @@ mod handle;
 mod inspect;
 mod ipc;
 mod memory;
+mod retirement;
 mod startup;
 mod system;
 mod task;
@@ -73,6 +74,11 @@ pub use memory::{
     vmar_allocate, vmar_destroy, vmar_lock_memory, vmar_map, vmar_map_file, vmar_map_private,
     vmar_protect, vmar_unlock_memory, vmar_unmap, vmo_create, vmo_create_contiguous,
     vmo_create_snapshot, vmo_get_dma_extent, vmo_read, vmo_write,
+};
+pub use retirement::{
+    crash_view_get_info, crash_view_handle, crash_view_mapping, crash_view_read, crash_view_thread,
+    process_builder_retain, process_retirement_get_info, process_retirement_open_view,
+    process_retirement_release,
 };
 pub use startup::{AuxiliaryEntry, RawStartup, startup_find_handle};
 pub use system::{abi_query, clock_get_monotonic, clock_get_realtime, system_config};

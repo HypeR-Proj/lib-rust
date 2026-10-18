@@ -51,6 +51,18 @@ macro_rules! object_types {
 
 object_types!(
     (
+        ProcessRetirementObject,
+        HYPER_NATIVE_OBJECT_PROCESS_RETIREMENT,
+        "process-retirement",
+        "supervised diagnostic retention"
+    ),
+    (
+        CrashViewObject,
+        HYPER_NATIVE_OBJECT_CRASH_VIEW,
+        "crash-view",
+        "revocable stopped-process observation"
+    ),
+    (
         EventObject,
         HYPER_NATIVE_OBJECT_EVENT,
         "event",
