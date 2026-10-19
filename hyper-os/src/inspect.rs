@@ -309,8 +309,9 @@ pub struct MemoryObservation {
     /// Whole slab pages recoverable by draining CPU-local magazines.
     /// None means the bounded concurrent census could not complete.
     pub slab_reclaimable_bytes: Option<u64>,
-    /// Unpinned file payload pages; independent of the slab census. This
-    /// conservative estimate excludes metadata released by cache compaction.
+    /// Unpinned file payload pages plus shrinker-managed index/header backing;
+    /// independent of the slab census. This is an estimate: live pins can retain
+    /// a minimum metadata set, so not every byte is immediately recoverable.
     /// Some(0) is a successful observation of an empty reclaimable pool.
     pub file_cache_reclaimable_bytes: Option<u64>,
     /// Live ramfs payload capacity reservations, excluding archive contents.
