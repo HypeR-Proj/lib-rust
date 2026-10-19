@@ -3,7 +3,7 @@
 
 //! Raw supervisor-controlled diagnostic retention operations.
 
-use crate::{CallResult, abi, ffi::ffi_native_call6};
+use crate::{CallResult, abi, ffi::ffi_native_invoke6};
 
 /// Returns a linear retirement controller for a not-yet-started child.
 ///
@@ -12,11 +12,12 @@ use crate::{CallResult, abi, ffi::ffi_native_call6};
 pub unsafe fn process_builder_retain(builder: u64, max_bytes: u64, timeout_ns: u64) -> CallResult {
     // SAFETY: The caller retains the required live capabilities.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_RETAIN,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_RETAIN,
             max_bytes,
             timeout_ns,
+            0,
             0,
             0,
             0,
@@ -31,9 +32,10 @@ pub unsafe fn process_builder_retain(builder: u64, max_bytes: u64, timeout_ns: u
 pub unsafe fn process_retirement_open_view(control: u64) -> CallResult {
     // SAFETY: The caller retains the required live capabilities.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_RETIREMENT_OPEN_VIEW,
+        ffi_native_invoke6(
             control,
+            abi::HYPER_NATIVE_OP_PROCESS_RETIREMENT_OPEN_VIEW,
+            0,
             0,
             0,
             0,
@@ -50,9 +52,10 @@ pub unsafe fn process_retirement_open_view(control: u64) -> CallResult {
 pub unsafe fn process_retirement_release(control: u64) -> CallResult {
     // SAFETY: The caller retains the required live capabilities.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_RETIREMENT_RELEASE,
+        ffi_native_invoke6(
             control,
+            abi::HYPER_NATIVE_OP_PROCESS_RETIREMENT_RELEASE,
+            0,
             0,
             0,
             0,
@@ -73,11 +76,12 @@ pub unsafe fn process_retirement_get_info(
 ) -> CallResult {
     // SAFETY: The caller supplies the live handle and writable record.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_RETIREMENT_GET_INFO,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_PROCESS_RETIREMENT_GET_INFO,
             output.addr() as u64,
             core::mem::size_of::<abi::HyperNativeProcessRetirementInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -96,11 +100,12 @@ pub unsafe fn crash_view_get_info(
 ) -> CallResult {
     // SAFETY: The caller supplies the live handle and writable record.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CRASH_VIEW_GET_INFO,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_CRASH_VIEW_GET_INFO,
             output.addr() as u64,
             core::mem::size_of::<abi::HyperNativeProcessRetirementInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -120,12 +125,13 @@ pub unsafe fn crash_view_thread(
 ) -> CallResult {
     // SAFETY: The caller supplies the live handle and writable record.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CRASH_VIEW_THREAD,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_CRASH_VIEW_THREAD,
             index,
             output.addr() as u64,
             core::mem::size_of::<abi::HyperNativeCrashThread>() as u64,
+            0,
             0,
             0,
         )
@@ -144,12 +150,13 @@ pub unsafe fn crash_view_mapping(
 ) -> CallResult {
     // SAFETY: The caller supplies the live handle and writable record.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CRASH_VIEW_MAPPING,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_CRASH_VIEW_MAPPING,
             index,
             output.addr() as u64,
             core::mem::size_of::<abi::HyperNativeCrashMapping>() as u64,
+            0,
             0,
             0,
         )
@@ -168,12 +175,13 @@ pub unsafe fn crash_view_handle(
 ) -> CallResult {
     // SAFETY: The caller supplies the live handle and writable record.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CRASH_VIEW_HANDLE,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_CRASH_VIEW_HANDLE,
             index,
             output.addr() as u64,
             core::mem::size_of::<abi::HyperNativeCrashHandle>() as u64,
+            0,
             0,
             0,
         )
@@ -193,12 +201,13 @@ pub unsafe fn crash_view_read(
 ) -> CallResult {
     // SAFETY: The caller supplies the capability and writable slice.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CRASH_VIEW_READ,
+        ffi_native_invoke6(
             view,
+            abi::HYPER_NATIVE_OP_CRASH_VIEW_READ,
             address,
             output.addr() as u64,
             length as u64,
+            0,
             0,
             0,
         )

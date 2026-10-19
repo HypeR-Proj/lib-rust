@@ -80,6 +80,7 @@ impl Rights {
     pub const SIGNAL: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SIGNAL);
     pub const CREATE_PROCESS: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_PROCESS);
     pub const CREATE_THREAD: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_THREAD);
+    pub const CREATE_OBJECT: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_OBJECT);
     pub const CREATE_TASK_GROUP: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_TASK_GROUP);
     pub const CREATE_RESOURCE_DOMAIN: Self =
         Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_RESOURCE_DOMAIN);
@@ -174,6 +175,7 @@ const RIGHT_NAMES: &[(Rights, &str)] = &[
     (Rights::SIGNAL, "signal"),
     (Rights::CREATE_PROCESS, "create-process"),
     (Rights::CREATE_THREAD, "create-thread"),
+    (Rights::CREATE_OBJECT, "create-object"),
     (Rights::CREATE_TASK_GROUP, "create-task-group"),
     (Rights::CREATE_RESOURCE_DOMAIN, "create-resource-domain"),
     (Rights::SET_LIMITS, "set-limits"),

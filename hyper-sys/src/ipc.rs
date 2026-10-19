@@ -3,7 +3,7 @@
 
 //! Byte-channel and transactional capability-channel transport.
 
-use crate::ffi::{ffi_byte_channel_read, ffi_byte_channel_write, ffi_native_call6};
+use crate::ffi::{ffi_byte_channel_read, ffi_byte_channel_write, ffi_native_invoke6};
 use crate::{CallResult, abi};
 
 /// Creates one raw `ByteChannel` endpoint pair.
@@ -15,7 +15,18 @@ use crate::{CallResult, abi};
 #[inline]
 pub unsafe fn byte_channel_create() -> CallResult {
     // SAFETY: the caller accepts ownership of both successful raw results.
-    unsafe { ffi_native_call6(abi::HYPER_NATIVE_SYS_BYTE_CHANNEL_CREATE, 0, 0, 0, 0, 0, 0) }
+    unsafe {
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_object_factory(),
+            abi::HYPER_NATIVE_OP_BYTE_CHANNEL_CREATE,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
 }
 
 /// Sends one handle-free message through a raw `ByteChannel` endpoint.
@@ -61,8 +72,9 @@ pub unsafe fn byte_channel_read(
 pub unsafe fn capability_channel_create() -> CallResult {
     // SAFETY: the caller accepts ownership of both successful raw results.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CAPABILITY_CHANNEL_CREATE,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_object_factory(),
+            abi::HYPER_NATIVE_OP_CAPABILITY_CHANNEL_CREATE,
             0,
             0,
             0,
@@ -93,14 +105,15 @@ pub unsafe fn capability_channel_try_send(
     // SAFETY: the caller establishes all pointer, handle, and transactional
     // ownership contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CAPABILITY_CHANNEL_TRY_SEND,
+        ffi_native_invoke6(
             endpoint,
+            abi::HYPER_NATIVE_OP_CAPABILITY_CHANNEL_TRY_SEND,
             0,
             bytes.addr() as u64,
             byte_count as u64,
             dispositions.addr() as u64,
             disposition_count as u64,
+            0,
         )
         .status
     }
@@ -127,14 +140,15 @@ pub unsafe fn capability_channel_receive(
     // SAFETY: the caller establishes all pointer, handle, initialization, and
     // successful-result ownership contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CAPABILITY_CHANNEL_RECEIVE,
+        ffi_native_invoke6(
             endpoint,
+            abi::HYPER_NATIVE_OP_CAPABILITY_CHANNEL_RECEIVE,
             deadline,
             bytes.addr() as u64,
             byte_capacity as u64,
             slots.addr() as u64,
             slot_count as u64,
+            0,
         )
     }
 }

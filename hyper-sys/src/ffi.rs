@@ -6,9 +6,17 @@
 use crate::{CallResult, RawStartup, abi};
 
 unsafe extern "C" {
-    #[link_name = "hyper_native_call6"]
-    pub(super) fn ffi_native_call6(
-        number: u64,
+    #[link_name = "hyper_native_execution_context"]
+    pub(super) fn ffi_native_execution_context() -> abi::HyperNativeHandle;
+    #[link_name = "hyper_native_object_factory"]
+    pub(super) fn ffi_native_object_factory() -> abi::HyperNativeHandle;
+    #[link_name = "hyper_native_system_info"]
+    pub(super) fn ffi_native_system_info() -> abi::HyperNativeHandle;
+
+    #[link_name = "hyper_native_invoke6"]
+    pub(super) fn ffi_native_invoke6(
+        target: abi::HyperNativeHandle,
+        operation: u64,
         argument0: u64,
         argument1: u64,
         argument2: u64,

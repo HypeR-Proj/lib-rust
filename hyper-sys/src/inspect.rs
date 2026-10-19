@@ -3,7 +3,7 @@
 
 //! Scoped task, object, CPU, and memory observation.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Scans one fixed-capacity page of Processes visible through a task inspector.
@@ -21,12 +21,13 @@ pub unsafe fn task_inspector_scan_processes(
 ) -> CallResult {
     // SAFETY: the caller establishes the handle and output-array contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_TASK_INSPECTOR_SCAN_PROCESSES,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_TASK_INSPECTOR_SCAN_PROCESSES,
             cursor,
             records.addr() as u64,
             capacity as u64,
+            0,
             0,
             0,
         )
@@ -47,12 +48,13 @@ pub unsafe fn task_inspector_scan_threads(
 ) -> CallResult {
     // SAFETY: the caller establishes the handle and output-array contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_TASK_INSPECTOR_SCAN_THREADS,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_TASK_INSPECTOR_SCAN_THREADS,
             cursor,
             records.addr() as u64,
             capacity as u64,
+            0,
             0,
             0,
         )
@@ -73,12 +75,13 @@ pub unsafe fn object_inspector_scan_objects(
 ) -> CallResult {
     // SAFETY: the caller establishes the handle and output-array contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_OBJECT_INSPECTOR_SCAN_OBJECTS,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_OBJECT_INSPECTOR_SCAN_OBJECTS,
             cursor,
             records.addr() as u64,
             capacity as u64,
+            0,
             0,
             0,
         )
@@ -100,13 +103,14 @@ pub unsafe fn object_inspector_scan_handles(
 ) -> CallResult {
     // SAFETY: the caller establishes the handle and output-array contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_OBJECT_INSPECTOR_SCAN_HANDLES,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_OBJECT_INSPECTOR_SCAN_HANDLES,
             process_koid,
             cursor,
             records.addr() as u64,
             capacity as u64,
+            0,
             0,
         )
     }
@@ -120,16 +124,16 @@ pub unsafe fn object_inspector_scan_handles(
 /// caller assumes exclusive ownership of the returned nonzero handle.
 #[inline]
 unsafe fn inspector_derive(
-    syscall: u64,
+    operation: u64,
     inspector: abi::HyperNativeHandle,
     scope: abi::HyperNativeHandle,
 ) -> CallResult {
     // SAFETY: the caller owns successful output-handle adoption.
-    unsafe { ffi_native_call6(syscall, inspector, scope, 0, 0, 0, 0) }
+    unsafe { ffi_native_invoke6(inspector, operation, scope, 0, 0, 0, 0, 0) }
 }
 
 macro_rules! inspector_derivation {
-    ($name:ident, $syscall:ident, $scope:literal) => {
+    ($name:ident, $operation:ident, $scope:literal) => {
         #[doc = concat!("Derives an inspector scoped to one ", $scope, ".")]
         ///
         /// # Safety
@@ -142,39 +146,39 @@ macro_rules! inspector_derivation {
             scope: abi::HyperNativeHandle,
         ) -> CallResult {
             // SAFETY: the caller owns successful output-handle adoption.
-            unsafe { inspector_derive(abi::$syscall, inspector, scope) }
+            unsafe { inspector_derive(abi::$operation, inspector, scope) }
         }
     };
 }
 
 inspector_derivation!(
     task_inspector_derive_process,
-    HYPER_NATIVE_SYS_TASK_INSPECTOR_DERIVE_PROCESS,
+    HYPER_NATIVE_OP_TASK_INSPECTOR_DERIVE_PROCESS,
     "Process"
 );
 inspector_derivation!(
     task_inspector_derive_task_group,
-    HYPER_NATIVE_SYS_TASK_INSPECTOR_DERIVE_TASK_GROUP,
+    HYPER_NATIVE_OP_TASK_INSPECTOR_DERIVE_TASK_GROUP,
     "TaskGroup"
 );
 inspector_derivation!(
     task_inspector_derive_resource_domain,
-    HYPER_NATIVE_SYS_TASK_INSPECTOR_DERIVE_RESOURCE_DOMAIN,
+    HYPER_NATIVE_OP_TASK_INSPECTOR_DERIVE_RESOURCE_DOMAIN,
     "ResourceDomain"
 );
 inspector_derivation!(
     object_inspector_derive_process,
-    HYPER_NATIVE_SYS_OBJECT_INSPECTOR_DERIVE_PROCESS,
+    HYPER_NATIVE_OP_OBJECT_INSPECTOR_DERIVE_PROCESS,
     "Process"
 );
 inspector_derivation!(
     object_inspector_derive_task_group,
-    HYPER_NATIVE_SYS_OBJECT_INSPECTOR_DERIVE_TASK_GROUP,
+    HYPER_NATIVE_OP_OBJECT_INSPECTOR_DERIVE_TASK_GROUP,
     "TaskGroup"
 );
 inspector_derivation!(
     object_inspector_derive_resource_domain,
-    HYPER_NATIVE_SYS_OBJECT_INSPECTOR_DERIVE_RESOURCE_DOMAIN,
+    HYPER_NATIVE_OP_OBJECT_INSPECTOR_DERIVE_RESOURCE_DOMAIN,
     "ResourceDomain"
 );
 
@@ -189,11 +193,12 @@ pub unsafe fn memory_inspector_read(
 ) -> CallResult {
     // SAFETY: the caller owns the pointer contract stated above.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_MEMORY_INSPECTOR_READ,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_MEMORY_INSPECTOR_READ,
             observation.addr() as u64,
             core::mem::size_of::<abi::HyperNativeMemoryObservation>() as u64,
+            0,
             0,
             0,
             0,
@@ -212,11 +217,12 @@ pub unsafe fn cpu_inspector_read(
 ) -> CallResult {
     // SAFETY: the caller owns the pointer contract stated above.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CPU_INSPECTOR_READ,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_CPU_INSPECTOR_READ,
             observation.addr() as u64,
             core::mem::size_of::<abi::HyperNativeCpuObservation>() as u64,
+            0,
             0,
             0,
             0,
@@ -238,14 +244,15 @@ pub unsafe fn object_inspector_read_details(
 ) -> CallResult {
     // SAFETY: the caller guarantees the writable output and handle lifetime.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_OBJECT_INSPECTOR_READ_DETAILS,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_OBJECT_INSPECTOR_READ_DETAILS,
             process,
             target,
             cursor,
             record.addr() as u64,
             core::mem::size_of::<abi::HyperNativeObjectDetails>() as u64,
+            0,
         )
     }
 }
@@ -264,13 +271,14 @@ pub unsafe fn memory_inspector_read_statistics(
 ) -> CallResult {
     // SAFETY: The caller owns the output buffer contract above.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_MEMORY_INSPECTOR_READ_STATISTICS,
+        ffi_native_invoke6(
             inspector,
+            abi::HYPER_NATIVE_OP_MEMORY_INSPECTOR_READ_STATISTICS,
             topic as u64,
             index as u64,
             record.addr() as u64,
             size as u64,
+            0,
             0,
         )
     }

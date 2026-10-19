@@ -3,7 +3,7 @@
 
 //! Physical-device claims, resources, firmware, MMIO, and IRQs.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Executes the Native `device_claim` operation.
@@ -15,10 +15,11 @@ use crate::{CallResult, abi};
 pub unsafe fn device_claim(authority: u64, index: u32) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_CLAIM,
+        ffi_native_invoke6(
             authority,
+            abi::HYPER_NATIVE_OP_DEVICE_CLAIM,
             u64::from(index),
+            0,
             0,
             0,
             0,
@@ -40,13 +41,14 @@ pub unsafe fn device_claim_matching(
 ) -> CallResult {
     // SAFETY: Caller retains the authority and readable identity bytes.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_CLAIM_MATCHING,
+        ffi_native_invoke6(
             authority,
+            abi::HYPER_NATIVE_OP_DEVICE_CLAIM_MATCHING,
             u64::from(profile),
             u64::from(identity_kind),
             identity as u64,
             length as u64,
+            0,
             0,
         )
     }
@@ -63,11 +65,12 @@ pub unsafe fn device_dma_fault_info(
 ) -> CallResult {
     // SAFETY: Caller establishes the handle and output buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_DMA_FAULT_INFO,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_DEVICE_DMA_FAULT_INFO,
             output as u64,
             size as u64,
+            0,
             0,
             0,
             0,
@@ -85,11 +88,12 @@ pub unsafe fn device_profile_info(
 ) -> CallResult {
     // SAFETY: Caller establishes the handle and output buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_PROFILE_INFO,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_DEVICE_PROFILE_INFO,
             output as u64,
             size as u64,
+            0,
             0,
             0,
             0,
@@ -108,12 +112,13 @@ pub unsafe fn device_resource_info(
 ) -> CallResult {
     // SAFETY: Caller establishes the handle and output buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_RESOURCE_INFO,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_DEVICE_RESOURCE_INFO,
             u64::from(index),
             output as u64,
             size as u64,
+            0,
             0,
             0,
         )
@@ -133,11 +138,12 @@ pub unsafe fn physical_device_info(
 ) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PHYSICAL_DEVICE_INFO,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_PHYSICAL_DEVICE_INFO,
             output as u64,
             size as u64,
+            0,
             0,
             0,
             0,
@@ -157,12 +163,13 @@ pub unsafe fn device_firmware_read(
 ) -> CallResult {
     // SAFETY: the caller provides valid handles and complete memory ranges.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_FIRMWARE_READ,
+        ffi_native_invoke6(
             authority,
+            abi::HYPER_NATIVE_OP_DEVICE_FIRMWARE_READ,
             query as u64,
             output as u64,
             capacity as u64,
+            0,
             0,
             0,
         )
@@ -181,12 +188,13 @@ pub unsafe fn device_claim_bundle(
 ) -> CallResult {
     // SAFETY: the caller provides valid handles and complete memory ranges.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_CLAIM_BUNDLE,
+        ffi_native_invoke6(
             authority,
+            abi::HYPER_NATIVE_OP_DEVICE_CLAIM_BUNDLE,
             entries as u64,
             count as u64,
             u64::from(irq_node),
+            0,
             0,
             0,
         )
@@ -206,13 +214,14 @@ pub unsafe fn device_mmio(
 ) -> CallResult {
     // SAFETY: the caller provides valid handles and complete memory ranges.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_MMIO,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_DEVICE_MMIO,
             offset,
             u64::from(width),
             u64::from(operation),
             value,
+            0,
             0,
         )
     }
@@ -225,9 +234,10 @@ pub unsafe fn device_mmio(
 pub unsafe fn device_irq_pending(device: u64) -> CallResult {
     // SAFETY: the caller provides valid handles and complete memory ranges.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_IRQ_PENDING,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_DEVICE_IRQ_PENDING,
+            0,
             0,
             0,
             0,
@@ -244,11 +254,12 @@ pub unsafe fn device_irq_pending(device: u64) -> CallResult {
 pub unsafe fn device_irq_complete(device: u64, sequence: u64, asserted: bool) -> CallResult {
     // SAFETY: the caller provides valid handles and complete memory ranges.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DEVICE_IRQ_COMPLETE,
+        ffi_native_invoke6(
             device,
+            abi::HYPER_NATIVE_OP_DEVICE_IRQ_COMPLETE,
             sequence,
             u64::from(asserted),
+            0,
             0,
             0,
             0,

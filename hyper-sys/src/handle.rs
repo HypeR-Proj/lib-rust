@@ -3,7 +3,7 @@
 
 //! Capability handle ownership and object identity.
 
-use crate::ffi::{ffi_handle_close, ffi_native_call6};
+use crate::ffi::{ffi_handle_close, ffi_native_invoke6};
 use crate::{CallResult, abi};
 
 /// Closes one raw process handle.
@@ -30,10 +30,11 @@ pub unsafe fn handle_duplicate(source: abi::HyperNativeHandle, rights: u64) -> C
     // SAFETY: the caller establishes the source-handle lifetime and ownership
     // contract for the returned value.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_HANDLE_DUPLICATE,
+        ffi_native_invoke6(
             source,
+            abi::HYPER_NATIVE_OP_HANDLE_DUPLICATE,
             rights,
+            0,
             0,
             0,
             0,
@@ -53,10 +54,11 @@ pub unsafe fn handle_duplicate(source: abi::HyperNativeHandle, rights: u64) -> C
 pub unsafe fn handle_replace(source: abi::HyperNativeHandle, rights: u64) -> CallResult {
     // SAFETY: the caller owns the source's consume-on-success transition.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_HANDLE_REPLACE,
+        ffi_native_invoke6(
             source,
+            abi::HYPER_NATIVE_OP_HANDLE_REPLACE,
             rights,
+            0,
             0,
             0,
             0,
@@ -78,11 +80,12 @@ pub unsafe fn handle_get_info(
 ) -> CallResult {
     // SAFETY: the caller establishes both handle and output-pointer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_HANDLE_GET_INFO,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_HANDLE_GET_INFO,
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeHandleInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -104,11 +107,12 @@ pub unsafe fn object_get_basic_info(
 ) -> CallResult {
     // SAFETY: the caller establishes both handle and output-pointer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_OBJECT_GET_BASIC_INFO,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_OBJECT_GET_BASIC_INFO,
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeObjectBasicInfo>() as u64,
+            0,
             0,
             0,
             0,

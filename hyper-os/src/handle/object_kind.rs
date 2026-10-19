@@ -51,6 +51,24 @@ macro_rules! object_types {
 
 object_types!(
     (
+        ExecutionContextObject,
+        HYPER_NATIVE_OBJECT_EXECUTION_CONTEXT,
+        "execution-context",
+        "process-local execution and waits"
+    ),
+    (
+        ObjectFactoryObject,
+        HYPER_NATIVE_OBJECT_OBJECT_FACTORY,
+        "object-factory",
+        "process-local resource creation"
+    ),
+    (
+        SystemInfoObject,
+        HYPER_NATIVE_OBJECT_SYSTEM_INFO,
+        "system-info",
+        "read-only system information and clocks"
+    ),
+    (
         ProcessRetirementObject,
         HYPER_NATIVE_OBJECT_PROCESS_RETIREMENT,
         "process-retirement",

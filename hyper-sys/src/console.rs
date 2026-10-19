@@ -3,7 +3,7 @@
 
 //! Physical console and guest virtual-serial transport.
 
-use crate::ffi::{ffi_console_read, ffi_console_write, ffi_native_call6};
+use crate::ffi::{ffi_console_read, ffi_console_write, ffi_native_invoke6};
 use crate::{CallResult, abi};
 
 /// Creates one unbound buffered virtual serial port.
@@ -15,8 +15,9 @@ use crate::{CallResult, abi};
 pub unsafe fn virtual_serial_create() -> CallResult {
     // SAFETY: result ownership is delegated to the caller.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_SERIAL_CREATE,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_object_factory(),
+            abi::HYPER_NATIVE_OP_VIRTUAL_SERIAL_CREATE,
             0,
             0,
             0,
@@ -41,10 +42,11 @@ pub unsafe fn virtual_serial_register_output(
 ) -> abi::HyperNativeStatus {
     // SAFETY: caller retains both handles and suspends buffer access during registration.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_SERIAL_REGISTER_OUTPUT,
+        ffi_native_invoke6(
             serial,
+            abi::HYPER_NATIVE_OP_VIRTUAL_SERIAL_REGISTER_OUTPUT,
             buffer,
+            0,
             0,
             0,
             0,
@@ -66,10 +68,11 @@ pub unsafe fn virtual_serial_acknowledge_output(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller retains the handle and has completed the prefix reads.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_SERIAL_ACKNOWLEDGE_OUTPUT,
+        ffi_native_invoke6(
             serial,
+            abi::HYPER_NATIVE_OP_VIRTUAL_SERIAL_ACKNOWLEDGE_OUTPUT,
             consumed,
+            0,
             0,
             0,
             0,
@@ -92,11 +95,12 @@ pub unsafe fn virtual_serial_write(
 ) -> CallResult {
     // SAFETY: the caller establishes the pointer and handle contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_SERIAL_WRITE,
+        ffi_native_invoke6(
             serial,
+            abi::HYPER_NATIVE_OP_VIRTUAL_SERIAL_WRITE,
             bytes as u64,
             length as u64,
+            0,
             0,
             0,
             0,
@@ -145,9 +149,10 @@ pub unsafe fn console_write(
 pub unsafe fn console_discard_input(console: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: the caller retains the required Console authority.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_CONSOLE_DISCARD_INPUT,
+        ffi_native_invoke6(
             console,
+            abi::HYPER_NATIVE_OP_CONSOLE_DISCARD_INPUT,
+            0,
             0,
             0,
             0,

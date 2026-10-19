@@ -3,7 +3,7 @@
 
 //! Signal waits, wait sets, and atomic-address synchronization.
 
-use crate::ffi::{ffi_atomic_wait, ffi_atomic_wake, ffi_native_call6, ffi_object_wait_one};
+use crate::ffi::{ffi_atomic_wait, ffi_atomic_wake, ffi_native_invoke6, ffi_object_wait_one};
 use crate::{CallResult, abi};
 
 /// Waits for signals on one raw process handle.
@@ -36,8 +36,9 @@ pub unsafe fn object_wait_many(
 ) -> CallResult {
     // SAFETY: the caller establishes the array and borrowed-handle contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_OBJECT_WAIT_MANY,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_execution_context(),
+            abi::HYPER_NATIVE_OP_OBJECT_WAIT_MANY,
             items.addr() as u64,
             item_count as u64,
             deadline,
@@ -80,8 +81,9 @@ pub unsafe fn atomic_wake(address: *const u32, count: u32) -> CallResult {
 pub unsafe fn wait_set_create(capacity: usize) -> CallResult {
     // SAFETY: the caller establishes handle validity and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_WAIT_SET_CREATE,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_object_factory(),
+            abi::HYPER_NATIVE_OP_WAIT_SET_CREATE,
             capacity as u64,
             0,
             0,
@@ -104,11 +106,12 @@ pub unsafe fn wait_set_add(
 ) -> CallResult {
     // SAFETY: the caller establishes handle validity and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_WAIT_SET_ADD,
+        ffi_native_invoke6(
             set,
+            abi::HYPER_NATIVE_OP_WAIT_SET_ADD,
             source,
             signals,
+            0,
             0,
             0,
             0,
@@ -124,10 +127,11 @@ pub unsafe fn wait_set_add(
 pub unsafe fn wait_set_rearm(set: abi::HyperNativeHandle, registration: u64) -> CallResult {
     // SAFETY: the caller establishes handle validity and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_WAIT_SET_REARM,
+        ffi_native_invoke6(
             set,
+            abi::HYPER_NATIVE_OP_WAIT_SET_REARM,
             registration,
+            0,
             0,
             0,
             0,
@@ -144,10 +148,11 @@ pub unsafe fn wait_set_rearm(set: abi::HyperNativeHandle, registration: u64) -> 
 pub unsafe fn wait_set_remove(set: abi::HyperNativeHandle, registration: u64) -> CallResult {
     // SAFETY: the caller establishes handle validity and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_WAIT_SET_REMOVE,
+        ffi_native_invoke6(
             set,
+            abi::HYPER_NATIVE_OP_WAIT_SET_REMOVE,
             registration,
+            0,
             0,
             0,
             0,
@@ -169,12 +174,13 @@ pub unsafe fn wait_set_wait(
 ) -> CallResult {
     // SAFETY: the caller pins the handle and provides writable output storage.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_WAIT_SET_WAIT,
+        ffi_native_invoke6(
             set,
+            abi::HYPER_NATIVE_OP_WAIT_SET_WAIT,
             deadline,
             output as u64,
             output_size as u64,
+            0,
             0,
             0,
         )

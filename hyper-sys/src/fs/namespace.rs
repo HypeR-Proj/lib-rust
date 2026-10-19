@@ -3,7 +3,7 @@
 
 //! Namespace topology calls requiring explicit root-administration authority.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Attach a fresh in-memory filesystem at a capability-relative path.
@@ -13,11 +13,12 @@ use crate::{CallResult, abi};
 pub unsafe fn filesystem_mount_ramfs(directory: u64, path: *const u8, length: usize) -> CallResult {
     // SAFETY: The caller retains the borrowed capability and path range.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_FILESYSTEM_MOUNT_RAMFS,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_MOUNT_RAMFS,
             path as u64,
             length as u64,
+            0,
             0,
             0,
             0,
@@ -36,10 +37,11 @@ pub unsafe fn filesystem_switch_root(
 ) -> CallResult {
     // SAFETY: The caller retains the capability and the complete request graph.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_FILESYSTEM_SWITCH_ROOT,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_SWITCH_ROOT,
             request as u64,
+            0,
             0,
             0,
             0,
@@ -58,10 +60,11 @@ pub unsafe fn filesystem_begin_root_switch(
 ) -> CallResult {
     // SAFETY: The caller establishes input lifetimes; output transfers ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_FILESYSTEM_BEGIN_ROOT_SWITCH,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_BEGIN_ROOT_SWITCH,
             request as u64,
+            0,
             0,
             0,
             0,
@@ -77,10 +80,11 @@ pub unsafe fn filesystem_begin_root_switch(
 pub unsafe fn filesystem_finish_root_switch(token: u64, commit: bool) -> CallResult {
     // SAFETY: The caller retains the non-retaining input capability.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_FILESYSTEM_FINISH_ROOT_SWITCH,
+        ffi_native_invoke6(
             token,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_FINISH_ROOT_SWITCH,
             u64::from(commit),
+            0,
             0,
             0,
             0,

@@ -4,7 +4,7 @@
 //! Process construction, resource domains, and thread lifecycle.
 
 use crate::ffi::{
-    ffi_native_call6, ffi_process_exit, ffi_thread_create, ffi_thread_exit,
+    ffi_native_invoke6, ffi_process_exit, ffi_thread_create, ffi_thread_exit,
     ffi_thread_request_stop, ffi_thread_sleep, ffi_thread_start, ffi_thread_yield,
 };
 use crate::{CallResult, abi};
@@ -17,8 +17,9 @@ use crate::{CallResult, abi};
 pub unsafe fn thread_set_current_name(name: *const u8, length: usize) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the borrowed input's lifetime.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_THREAD_SET_CURRENT_NAME,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_execution_context(),
+            abi::HYPER_NATIVE_OP_THREAD_SET_CURRENT_NAME,
             name as u64,
             length as u64,
             0,
@@ -44,11 +45,12 @@ pub unsafe fn resource_domain_create(
 ) -> CallResult {
     // SAFETY: the caller establishes the borrowed input and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_RESOURCE_DOMAIN_CREATE,
+        ffi_native_invoke6(
             parent,
+            abi::HYPER_NATIVE_OP_RESOURCE_DOMAIN_CREATE,
             limits as u64,
             core::mem::size_of::<abi::HyperNativeResourceLimits>() as u64,
+            0,
             0,
             0,
             0,
@@ -69,10 +71,11 @@ pub unsafe fn task_group_create(
 ) -> CallResult {
     // SAFETY: the caller establishes borrowed inputs and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_TASK_GROUP_CREATE,
+        ffi_native_invoke6(
             factory,
+            abi::HYPER_NATIVE_OP_TASK_GROUP_CREATE,
             resource_domain,
+            0,
             0,
             0,
             0,
@@ -91,9 +94,10 @@ pub unsafe fn task_group_create(
 pub unsafe fn process_derive_observer(handle: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: the caller establishes the live capability contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_DERIVE_OBSERVER,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_PROCESS_DERIVE_OBSERVER,
+            0,
             0,
             0,
             0,
@@ -113,9 +117,10 @@ pub unsafe fn process_derive_observer(handle: abi::HyperNativeHandle) -> CallRes
 pub unsafe fn task_group_request_stop(handle: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the live capability contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_TASK_GROUP_REQUEST_STOP,
+        ffi_native_invoke6(
             handle,
+            abi::HYPER_NATIVE_OP_TASK_GROUP_REQUEST_STOP,
+            0,
             0,
             0,
             0,
@@ -139,11 +144,12 @@ pub unsafe fn process_get_info(
 ) -> CallResult {
     // SAFETY: the caller establishes the handle and output-pointer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_GET_INFO,
+        ffi_native_invoke6(
             process,
+            abi::HYPER_NATIVE_OP_PROCESS_GET_INFO,
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeProcessInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -169,13 +175,14 @@ pub unsafe fn process_builder_create(
     // SAFETY: the caller establishes all borrowed authority and result-owner
     // contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_CREATE,
+        ffi_native_invoke6(
             factory,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_CREATE,
             group,
             domain,
             executable,
             loader,
+            0,
             0,
         )
     }
@@ -195,11 +202,12 @@ pub unsafe fn process_builder_set_name(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the handle and buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_NAME,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_SET_NAME,
             name.addr() as u64,
             name_size as u64,
+            0,
             0,
             0,
             0,
@@ -220,11 +228,12 @@ pub unsafe fn process_builder_set_data(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes handle and input-buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_DATA,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_SET_DATA,
             data.addr() as u64,
             size as u64,
+            0,
             0,
             0,
             0,
@@ -247,11 +256,12 @@ pub unsafe fn process_builder_set_affinity(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the handle and buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_AFFINITY,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_SET_AFFINITY,
             words.addr() as u64,
             word_count as u64,
+            0,
             0,
             0,
             0,
@@ -279,14 +289,15 @@ pub unsafe fn process_builder_add_handle(
     // SAFETY: the caller establishes both handle contracts and owns the
     // operation-dependent commit transition.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_ADD_HANDLE,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_ADD_HANDLE,
             source,
             u64::from(purpose),
             u64::from(expected_kind),
             rights,
             u64::from(operation),
+            0,
         )
         .status
     }
@@ -301,9 +312,10 @@ pub unsafe fn process_builder_add_handle(
 pub unsafe fn process_builder_seal(builder: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the borrowed builder contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_SEAL,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_SEAL,
+            0,
             0,
             0,
             0,
@@ -327,9 +339,10 @@ pub unsafe fn process_builder_seal(builder: abi::HyperNativeHandle) -> abi::Hype
 pub unsafe fn process_builder_start(builder: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: the caller owns the builder's consume-on-success transition.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_START,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_START,
+            0,
             0,
             0,
             0,
@@ -349,9 +362,10 @@ pub unsafe fn process_builder_start(builder: abi::HyperNativeHandle) -> CallResu
 pub unsafe fn process_builder_abort(builder: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
     // SAFETY: the caller owns the builder's consume-on-success transition.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_ABORT,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_ABORT,
+            0,
             0,
             0,
             0,
@@ -371,9 +385,10 @@ pub unsafe fn process_builder_abort(builder: abi::HyperNativeHandle) -> abi::Hyp
 pub unsafe fn process_request_stop(process: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the borrowed Process contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_REQUEST_STOP,
+        ffi_native_invoke6(
             process,
+            abi::HYPER_NATIVE_OP_PROCESS_REQUEST_STOP,
+            0,
             0,
             0,
             0,
@@ -483,8 +498,9 @@ pub unsafe fn thread_sleep(deadline: u64) -> abi::HyperNativeStatus {
 pub unsafe fn process_get_current_id() -> CallResult {
     // SAFETY: this call has no pointers or capability arguments.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_GET_CURRENT_ID,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_execution_context(),
+            abi::HYPER_NATIVE_OP_PROCESS_GET_CURRENT_ID,
             0,
             0,
             0,
@@ -505,10 +521,11 @@ pub unsafe fn process_builder_set_memory_lock(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains the capability for the non-retaining syscall.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PROCESS_BUILDER_SET_MEMORY_LOCK,
+        ffi_native_invoke6(
             builder,
+            abi::HYPER_NATIVE_OP_PROCESS_BUILDER_SET_MEMORY_LOCK,
             u64::from(enabled),
+            0,
             0,
             0,
             0,

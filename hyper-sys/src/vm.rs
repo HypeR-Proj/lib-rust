@@ -3,7 +3,7 @@
 
 //! Guest creation, configuration, and virtual CPU control.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Derives one resource-domain-bound VM creation lease.
@@ -19,10 +19,11 @@ pub unsafe fn virtual_machine_creation_lease_create(
 ) -> CallResult {
     // SAFETY: the caller establishes the borrowed input and output ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_CREATION_LEASE_CREATE,
+        ffi_native_invoke6(
             authority,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_CREATION_LEASE_CREATE,
             resource_domain,
+            0,
             0,
             0,
             0,
@@ -45,11 +46,12 @@ pub unsafe fn virtual_machine_create(
 ) -> CallResult {
     // SAFETY: the caller establishes input pointer and handle ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_CREATE,
+        ffi_native_invoke6(
             lease,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_CREATE,
             configuration.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualMachineConfiguration>() as u64,
+            0,
             0,
             0,
             0,
@@ -69,10 +71,11 @@ pub unsafe fn pending_virtual_machine_set_memory(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes both borrowed handle lifetimes.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_SET_MEMORY,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_SET_MEMORY,
             vmo,
+            0,
             0,
             0,
             0,
@@ -95,10 +98,11 @@ pub unsafe fn pending_virtual_machine_set_virtual_serial(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes both handle lifetimes and ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_SET_VIRTUAL_SERIAL,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_SET_VIRTUAL_SERIAL,
             serial,
+            0,
             0,
             0,
             0,
@@ -120,11 +124,12 @@ pub unsafe fn pending_virtual_machine_set_bootstrap(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes pointer validity and handle lifetime.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_SET_BOOTSTRAP,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_SET_BOOTSTRAP,
             bootstrap.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualCpuBootstrap>() as u64,
+            0,
             0,
             0,
             0,
@@ -144,9 +149,10 @@ pub unsafe fn pending_virtual_machine_seal(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the borrowed handle lifetime.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_SEAL,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_SEAL,
+            0,
             0,
             0,
             0,
@@ -168,9 +174,10 @@ pub unsafe fn pending_virtual_machine_seal(
 pub unsafe fn pending_virtual_machine_install(pending: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: the caller establishes input and returned-handle ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_INSTALL,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_INSTALL,
+            0,
             0,
             0,
             0,
@@ -188,7 +195,19 @@ pub unsafe fn pending_virtual_machine_install(pending: abi::HyperNativeHandle) -
 #[inline]
 pub unsafe fn virtual_cpu_start(vcpu: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the borrowed handle lifetime.
-    unsafe { ffi_native_call6(abi::HYPER_NATIVE_SYS_VIRTUAL_CPU_START, vcpu, 0, 0, 0, 0, 0).status }
+    unsafe {
+        ffi_native_invoke6(
+            vcpu,
+            abi::HYPER_NATIVE_OP_VIRTUAL_CPU_START,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+        .status
+    }
 }
 
 /// Replaces a vCPU's host-CPU affinity mask.
@@ -204,11 +223,12 @@ pub unsafe fn virtual_cpu_set_affinity(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the handle and input buffer lifetimes.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_CPU_SET_AFFINITY,
+        ffi_native_invoke6(
             vcpu,
+            abi::HYPER_NATIVE_OP_VIRTUAL_CPU_SET_AFFINITY,
             words.addr() as u64,
             word_count as u64,
+            0,
             0,
             0,
             0,
@@ -228,9 +248,10 @@ pub unsafe fn pending_virtual_machine_abort(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes consuming handle ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_ABORT,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_ABORT,
+            0,
             0,
             0,
             0,
@@ -252,9 +273,10 @@ pub unsafe fn virtual_machine_request_stop(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the borrowed handle lifetime.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_REQUEST_STOP,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_REQUEST_STOP,
+            0,
             0,
             0,
             0,
@@ -277,11 +299,12 @@ pub unsafe fn virtual_machine_get_info(
 ) -> CallResult {
     // SAFETY: the caller establishes handle and pointer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_GET_INFO,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_GET_INFO,
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualMachineInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -301,11 +324,12 @@ pub unsafe fn virtual_cpu_get_info(
 ) -> CallResult {
     // SAFETY: the caller establishes handle and pointer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_CPU_GET_INFO,
+        ffi_native_invoke6(
             vcpu,
+            abi::HYPER_NATIVE_OP_VIRTUAL_CPU_GET_INFO,
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualCpuInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -325,12 +349,13 @@ pub unsafe fn virtual_machine_creation_lease_get_platform_info(
 ) -> CallResult {
     // SAFETY: the caller establishes handle and pointer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_CREATION_LEASE_GET_PLATFORM_INFO,
+        ffi_native_invoke6(
             lease,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_CREATION_LEASE_GET_PLATFORM_INFO,
             u64::from(profile),
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualMachinePlatformInfo>() as u64,
+            0,
             0,
             0,
         )
@@ -349,11 +374,12 @@ pub unsafe fn virtual_machine_get_power_request(
 ) -> CallResult {
     // SAFETY: The caller establishes handle and output validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_GET_POWER_REQUEST,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_GET_POWER_REQUEST,
             request.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualMachinePowerRequest>() as u64,
+            0,
             0,
             0,
             0,
@@ -374,11 +400,12 @@ pub unsafe fn virtual_machine_complete_power_request(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains the handle; scalar arguments borrow no memory.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_COMPLETE_POWER_REQUEST,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_COMPLETE_POWER_REQUEST,
             request_id,
             u64::from(accept),
+            0,
             0,
             0,
             0,
@@ -399,10 +426,11 @@ pub unsafe fn virtual_machine_open_vcpu(
 ) -> CallResult {
     // SAFETY: The caller retains the input and owns the returned capability.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_OPEN_VCPU,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_OPEN_VCPU,
             u64::from(vcpu_id),
+            0,
             0,
             0,
             0,
@@ -424,12 +452,13 @@ pub unsafe fn virtual_machine_register_mmio(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains the handle; all remaining arguments are scalars.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_MACHINE_REGISTER_MMIO,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_VIRTUAL_MACHINE_REGISTER_MMIO,
             base,
             length,
             device,
+            0,
             0,
             0,
         )
@@ -448,11 +477,12 @@ pub unsafe fn virtual_cpu_get_mmio_request(
 ) -> CallResult {
     // SAFETY: The caller establishes handle and output validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_CPU_GET_MMIO_REQUEST,
+        ffi_native_invoke6(
             vcpu,
+            abi::HYPER_NATIVE_OP_VIRTUAL_CPU_GET_MMIO_REQUEST,
             request.addr() as u64,
             core::mem::size_of::<abi::HyperNativeVirtualCpuMmioRequest>() as u64,
+            0,
             0,
             0,
             0,
@@ -473,12 +503,13 @@ pub unsafe fn virtual_cpu_complete_mmio(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains the handle; all remaining arguments are scalars.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VIRTUAL_CPU_COMPLETE_MMIO,
+        ffi_native_invoke6(
             vcpu,
+            abi::HYPER_NATIVE_OP_VIRTUAL_CPU_COMPLETE_MMIO,
             id,
             u64::from(operation),
             value,
+            0,
             0,
             0,
         )
@@ -494,9 +525,10 @@ pub unsafe fn virtual_cpu_complete_mmio(
 pub unsafe fn guest_memory_create(vmo: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: The caller retains the sole borrowed handle.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MEMORY_CREATE,
+        ffi_native_invoke6(
             vmo,
+            abi::HYPER_NATIVE_OP_GUEST_MEMORY_CREATE,
+            0,
             0,
             0,
             0,
@@ -520,13 +552,14 @@ pub unsafe fn pending_virtual_machine_map_memory(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains both handles; remaining arguments are scalars.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_MAP_MEMORY,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_MAP_MEMORY,
             memory,
             guest_offset,
             source_offset,
             length,
+            0,
             0,
         )
         .status
@@ -547,12 +580,13 @@ pub unsafe fn pending_virtual_machine_assign_device(
 ) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_PENDING_VIRTUAL_MACHINE_ASSIGN_DEVICE,
+        ffi_native_invoke6(
             pending,
+            abi::HYPER_NATIVE_OP_PENDING_VIRTUAL_MACHINE_ASSIGN_DEVICE,
             device,
             base,
             u64::from(irq),
+            0,
             0,
             0,
         )

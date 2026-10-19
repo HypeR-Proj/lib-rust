@@ -3,7 +3,7 @@
 
 //! Virtual memory objects and address-space mappings.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Creates one zero-filled writable VMO.
@@ -14,7 +14,18 @@ use crate::{CallResult, abi};
 #[inline]
 pub unsafe fn vmo_create(size: u64) -> CallResult {
     // SAFETY: ownership of the successful raw result transfers to the caller.
-    unsafe { ffi_native_call6(abi::HYPER_NATIVE_SYS_VMO_CREATE, size, 0, 0, 0, 0, 0) }
+    unsafe {
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_object_factory(),
+            abi::HYPER_NATIVE_OP_VMO_CREATE,
+            size,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
 }
 
 /// Reads bytes from a VMO.
@@ -32,12 +43,13 @@ pub unsafe fn vmo_read(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the raw handle and output range.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMO_READ,
+        ffi_native_invoke6(
             vmo,
+            abi::HYPER_NATIVE_OP_VMO_READ,
             offset,
             output.addr() as u64,
             length as u64,
+            0,
             0,
             0,
         )
@@ -60,12 +72,13 @@ pub unsafe fn vmo_write(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the raw handle and input range.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMO_WRITE,
+        ffi_native_invoke6(
             vmo,
+            abi::HYPER_NATIVE_OP_VMO_WRITE,
             offset,
             input.addr() as u64,
             length as u64,
+            0,
             0,
             0,
         )
@@ -90,12 +103,13 @@ pub unsafe fn vmar_allocate(
 ) -> CallResult {
     // SAFETY: the caller establishes the parent and result ownership contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_ALLOCATE,
+        ffi_native_invoke6(
             parent,
+            abi::HYPER_NATIVE_OP_VMAR_ALLOCATE,
             address,
             size,
             options,
+            0,
             0,
             0,
         )
@@ -119,14 +133,15 @@ pub unsafe fn vmar_map(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes both handles and the complete map range.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_MAP,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_MAP,
             vmo,
             object_offset,
             address,
             size,
             permissions,
+            0,
         )
         .status
     }
@@ -147,12 +162,13 @@ pub unsafe fn vmar_protect(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the authority and exact range contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_PROTECT,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_PROTECT,
             address,
             size,
             permissions,
+            0,
             0,
             0,
         )
@@ -174,11 +190,12 @@ pub unsafe fn vmar_unmap(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller establishes the authority and exact range contract.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_UNMAP,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_UNMAP,
             address,
             size,
+            0,
             0,
             0,
             0,
@@ -196,7 +213,7 @@ pub unsafe fn vmar_unmap(
 #[inline]
 pub unsafe fn vmar_destroy(vmar: abi::HyperNativeHandle) -> abi::HyperNativeStatus {
     // SAFETY: the caller owns the consume-on-success transition.
-    unsafe { ffi_native_call6(abi::HYPER_NATIVE_SYS_VMAR_DESTROY, vmar, 0, 0, 0, 0, 0).status }
+    unsafe { ffi_native_invoke6(vmar, abi::HYPER_NATIVE_OP_VMAR_DESTROY, 0, 0, 0, 0, 0, 0).status }
 }
 
 /// Creates an immutable snapshot of borrowed VMO bytes.
@@ -206,9 +223,10 @@ pub unsafe fn vmar_destroy(vmar: abi::HyperNativeHandle) -> abi::HyperNativeStat
 pub unsafe fn vmo_create_snapshot(vmo: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: the caller supplies a live borrowed VMO and adopts the result.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMO_CREATE_SNAPSHOT,
+        ffi_native_invoke6(
             vmo,
+            abi::HYPER_NATIVE_OP_VMO_CREATE_SNAPSHOT,
+            0,
             0,
             0,
             0,
@@ -231,12 +249,13 @@ pub unsafe fn vmar_map_private(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller supplies live handles, request bytes, and destination ownership.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_MAP_PRIVATE,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_MAP_PRIVATE,
             snapshot,
             mapping as usize as u64,
             mapping_size as u64,
+            0,
             0,
             0,
         )
@@ -252,8 +271,9 @@ pub unsafe fn vmar_map_private(
 pub unsafe fn vmo_create_contiguous(size: u64) -> CallResult {
     // SAFETY: Scalar request; no borrowed memory or input capability.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMO_CREATE_CONTIGUOUS,
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_object_factory(),
+            abi::HYPER_NATIVE_OP_VMO_CREATE_CONTIGUOUS,
             size,
             0,
             0,
@@ -280,14 +300,15 @@ pub unsafe fn vmo_get_dma_extent(
 ) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMO_GET_DMA_EXTENT,
+        ffi_native_invoke6(
             authority,
+            abi::HYPER_NATIVE_OP_VMO_GET_DMA_EXTENT,
             vmo,
             offset,
             length,
             output as u64,
             size as u64,
+            0,
         )
     }
 }
@@ -311,13 +332,14 @@ pub unsafe fn vmar_map_file(
 ) -> abi::HyperNativeStatus {
     // SAFETY: the caller retains all capabilities and the request record.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_MAP_FILE,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_MAP_FILE,
             file,
             protection,
             mapping as u64,
             mapping_size as u64,
+            0,
             0,
         )
         .status
@@ -336,12 +358,13 @@ pub unsafe fn vmar_lock_memory(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains the handle; the kernel validates the range.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_LOCK_MEMORY,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_LOCK_MEMORY,
             address,
             size,
             flags,
+            0,
             0,
             0,
         )
@@ -361,12 +384,13 @@ pub unsafe fn vmar_unlock_memory(
 ) -> abi::HyperNativeStatus {
     // SAFETY: The caller retains the handle; the kernel validates the range.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_VMAR_UNLOCK_MEMORY,
+        ffi_native_invoke6(
             vmar,
+            abi::HYPER_NATIVE_OP_VMAR_UNLOCK_MEMORY,
             address,
             size,
             flags,
+            0,
             0,
             0,
         )

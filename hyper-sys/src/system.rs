@@ -3,7 +3,7 @@
 
 //! ABI discovery and system clocks.
 
-use crate::ffi::{ffi_abi_query, ffi_clock_get_monotonic, ffi_native_call6};
+use crate::ffi::{ffi_abi_query, ffi_clock_get_monotonic, ffi_native_invoke6};
 use crate::{CallResult, abi};
 
 /// Queries the Native ABI revision and feature mask.
@@ -25,7 +25,18 @@ pub unsafe fn abi_query() -> CallResult {
 #[inline]
 pub unsafe fn system_config(key: u64) -> CallResult {
     // SAFETY: caller establishes the Native execution contract; no pointers.
-    unsafe { ffi_native_call6(abi::HYPER_NATIVE_SYS_SYSTEM_CONFIG, key, 0, 0, 0, 0, 0) }
+    unsafe {
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_system_info(),
+            abi::HYPER_NATIVE_OP_SYSTEM_CONFIG,
+            key,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
 }
 
 /// Reads absolute nanoseconds from the kernel monotonic clock domain.
@@ -48,5 +59,16 @@ pub unsafe fn clock_get_monotonic() -> CallResult {
 /// pointers must exclusively reference writable records or byte ranges.
 pub unsafe fn clock_get_realtime() -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
-    unsafe { ffi_native_call6(abi::HYPER_NATIVE_SYS_CLOCK_GET_REALTIME, 0, 0, 0, 0, 0, 0) }
+    unsafe {
+        ffi_native_invoke6(
+            crate::ffi::ffi_native_system_info(),
+            abi::HYPER_NATIVE_OP_CLOCK_GET_REALTIME,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
 }

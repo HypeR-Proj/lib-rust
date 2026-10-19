@@ -3,7 +3,7 @@
 
 //! Capability-relative filesystem namespace operations.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Opens one file relative to a `Directory` capability.
@@ -24,12 +24,13 @@ pub unsafe fn directory_open_file(
     // SAFETY: the caller establishes the handle, input-buffer, and ownership
     // contracts of the raw Native operation.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_OPEN_FILE,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE,
             path.addr() as u64,
             path_size as u64,
             requested_rights,
+            0,
             0,
             0,
         )
@@ -52,12 +53,13 @@ pub unsafe fn directory_open_directory(
 ) -> CallResult {
     // SAFETY: the caller establishes all raw handle and buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_OPEN_DIRECTORY,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_DIRECTORY,
             path.addr() as u64,
             path_size as u64,
             requested_rights,
+            0,
             0,
             0,
         )
@@ -74,9 +76,10 @@ pub unsafe fn directory_open_directory(
 pub unsafe fn directory_begin_read(directory: abi::HyperNativeHandle) -> CallResult {
     // SAFETY: the caller retains the source authority and adopts the result.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_BEGIN_READ,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_BEGIN_READ,
+            0,
             0,
             0,
             0,
@@ -104,12 +107,13 @@ pub unsafe fn directory_read(
     // SAFETY: the caller establishes the borrowed handle, output-buffer, and
     // exact-capacity contracts of the raw Native operation.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_READ,
+        ffi_native_invoke6(
             stream,
+            abi::HYPER_NATIVE_OP_DIRECTORY_READ,
             cookie,
             records.addr() as u64,
             capacity as u64,
+            0,
             0,
             0,
         )
@@ -129,11 +133,12 @@ pub unsafe fn directory_get_info(
 ) -> CallResult {
     // SAFETY: the caller establishes both handle and output-pointer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_GET_INFO,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_GET_INFO,
             info.addr() as u64,
             core::mem::size_of::<abi::HyperNativeDirectoryInfo>() as u64,
+            0,
             0,
             0,
             0,
@@ -156,13 +161,14 @@ pub unsafe fn directory_create_file(
 ) -> CallResult {
     // SAFETY: the caller establishes the Native handle and buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_CREATE_FILE,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_CREATE_FILE,
             path.addr() as u64,
             path_size as u64,
             rights,
             mode as u64,
+            0,
             0,
         )
     }
@@ -182,12 +188,13 @@ pub unsafe fn directory_create_directory(
 ) -> CallResult {
     // SAFETY: the caller establishes the Native handle and buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_CREATE_DIRECTORY,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_CREATE_DIRECTORY,
             path.addr() as u64,
             path_size as u64,
             mode as u64,
+            0,
             0,
             0,
         )
@@ -208,12 +215,13 @@ pub unsafe fn directory_remove(
 ) -> CallResult {
     // SAFETY: the caller establishes the Native handle and buffer contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_REMOVE,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_REMOVE,
             path.addr() as u64,
             path_size as u64,
             options as u64,
+            0,
             0,
             0,
         )
@@ -233,11 +241,12 @@ pub unsafe fn directory_scope_create(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_SCOPE_CREATE,
+        ffi_native_invoke6(
             root,
+            abi::HYPER_NATIVE_OP_DIRECTORY_SCOPE_CREATE,
             start,
             rights,
+            0,
             0,
             0,
             0,
@@ -261,14 +270,15 @@ pub unsafe fn directory_get_metadata(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_GET_METADATA,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_GET_METADATA,
             path as u64,
             path_length as u64,
             options as u64,
             output as u64,
             output_size as u64,
+            0,
         )
     }
 }
@@ -286,11 +296,12 @@ pub unsafe fn directory_get_self_metadata(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_GET_SELF_METADATA,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_GET_SELF_METADATA,
             output as u64,
             output_size as u64,
+            0,
             0,
             0,
             0,
@@ -314,14 +325,15 @@ pub unsafe fn directory_set_metadata(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_SET_METADATA,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_SET_METADATA,
             path as u64,
             path_length as u64,
             options as u64,
             input as u64,
             input_size as u64,
+            0,
         )
     }
 }
@@ -342,14 +354,15 @@ pub unsafe fn directory_rename(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_RENAME,
+        ffi_native_invoke6(
             source,
+            abi::HYPER_NATIVE_OP_DIRECTORY_RENAME,
             path as u64,
             path_length as u64,
             destination,
             new_path as u64,
             new_path_length as u64,
+            0,
         )
     }
 }
@@ -370,14 +383,15 @@ pub unsafe fn directory_link(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_LINK,
+        ffi_native_invoke6(
             source,
+            abi::HYPER_NATIVE_OP_DIRECTORY_LINK,
             path as u64,
             path_length as u64,
             destination,
             new_path as u64,
             new_path_length as u64,
+            0,
         )
     }
 }
@@ -397,13 +411,14 @@ pub unsafe fn directory_symlink(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_SYMLINK,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_SYMLINK,
             path as u64,
             path_length as u64,
             target as u64,
             target_length as u64,
+            0,
             0,
         )
     }
@@ -424,13 +439,14 @@ pub unsafe fn directory_read_link(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_READ_LINK,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_READ_LINK,
             path as u64,
             path_length as u64,
             output as u64,
             capacity as u64,
+            0,
             0,
         )
     }
@@ -451,13 +467,14 @@ pub unsafe fn directory_canonicalize(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_CANONICALIZE,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_CANONICALIZE,
             path as u64,
             path_length as u64,
             output as u64,
             capacity as u64,
+            0,
             0,
         )
     }
@@ -478,13 +495,14 @@ pub unsafe fn directory_remove_if(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_REMOVE_IF,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_REMOVE_IF,
             path as u64,
             path_length as u64,
             options as u64,
             expected_node_id,
+            0,
             0,
         )
     }
@@ -504,12 +522,13 @@ pub unsafe fn directory_open_directory_nofollow(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_OPEN_DIRECTORY_NOFOLLOW,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_DIRECTORY_NOFOLLOW,
             path as u64,
             path_length as u64,
             rights,
+            0,
             0,
             0,
         )
@@ -532,14 +551,15 @@ pub unsafe fn directory_open_file_with_options(
 ) -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_DIRECTORY_OPEN_FILE_WITH_OPTIONS,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE_WITH_OPTIONS,
             path as u64,
             path_length as u64,
             rights,
             options as u64,
             mode as u64,
+            0,
         )
     }
 }

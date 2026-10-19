@@ -3,7 +3,7 @@
 
 //! Guest mailboxes, notifications, mappings, and block backends.
 
-use crate::ffi::ffi_native_call6;
+use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
 /// Executes the Native `guest_mailbox_create` operation.
@@ -15,11 +15,12 @@ use crate::{CallResult, abi};
 pub unsafe fn guest_mailbox_create(machine: u64, base: u64, irq: u32) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MAILBOX_CREATE,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_GUEST_MAILBOX_CREATE,
             base,
             u64::from(irq),
+            0,
             0,
             0,
             0,
@@ -36,11 +37,12 @@ pub unsafe fn guest_mailbox_create(machine: u64, base: u64, irq: u32) -> CallRes
 pub unsafe fn guest_mailbox_send(mailbox: u64, bytes: *const u8, length: usize) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MAILBOX_SEND,
+        ffi_native_invoke6(
             mailbox,
+            abi::HYPER_NATIVE_OP_GUEST_MAILBOX_SEND,
             bytes as u64,
             length as u64,
+            0,
             0,
             0,
             0,
@@ -57,11 +59,12 @@ pub unsafe fn guest_mailbox_send(mailbox: u64, bytes: *const u8, length: usize) 
 pub unsafe fn guest_mailbox_receive(mailbox: u64, bytes: *mut u8, capacity: usize) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MAILBOX_RECEIVE,
+        ffi_native_invoke6(
             mailbox,
+            abi::HYPER_NATIVE_OP_GUEST_MAILBOX_RECEIVE,
             bytes as u64,
             capacity as u64,
+            0,
             0,
             0,
             0,
@@ -85,14 +88,15 @@ pub unsafe fn guest_notification_create(
 ) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_NOTIFICATION_CREATE,
+        ffi_native_invoke6(
             frontend,
+            abi::HYPER_NATIVE_OP_GUEST_NOTIFICATION_CREATE,
             backend,
             frontend_base,
             backend_base,
             u64::from(frontend_irq),
             u64::from(backend_irq),
+            0,
         )
     }
 }
@@ -106,10 +110,11 @@ pub unsafe fn guest_notification_create(
 pub unsafe fn guest_notification_control(notification: u64, operation: u32) -> CallResult {
     // SAFETY: The caller establishes the ABI handle and memory contracts.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_NOTIFICATION_CONTROL,
+        ffi_native_invoke6(
             notification,
+            abi::HYPER_NATIVE_OP_GUEST_NOTIFICATION_CONTROL,
             u64::from(operation),
+            0,
             0,
             0,
             0,
@@ -132,13 +137,14 @@ pub unsafe fn native_block_create(
 ) -> CallResult {
     // SAFETY: The caller retains the input capabilities.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_NATIVE_BLOCK_CREATE,
+        ffi_native_invoke6(
             memory,
+            abi::HYPER_NATIVE_OP_NATIVE_BLOCK_CREATE,
             backend,
             guest_base,
             notification_base,
             u64::from(notification_irq),
+            0,
             0,
         )
     }
@@ -152,10 +158,11 @@ pub unsafe fn native_block_create(
 pub unsafe fn native_block_activate(block: u64, readonly: bool) -> CallResult {
     // SAFETY: The caller retains the input capability.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_NATIVE_BLOCK_ACTIVATE,
+        ffi_native_invoke6(
             block,
+            abi::HYPER_NATIVE_OP_NATIVE_BLOCK_ACTIVATE,
             u64::from(readonly),
+            0,
             0,
             0,
             0,
@@ -179,14 +186,15 @@ pub unsafe fn filesystem_mount(
 ) -> CallResult {
     // SAFETY: Caller retains all capabilities and path bytes for the call.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_FILESYSTEM_MOUNT,
+        ffi_native_invoke6(
+            directory,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_MOUNT,
             channel,
             buffer,
-            directory,
             path as u64,
             length as u64,
             u64::from(read_only),
+            0,
         )
     }
 }
@@ -196,11 +204,12 @@ pub unsafe fn filesystem_mount(
 pub unsafe fn filesystem_unmount(directory: u64, path: *const u8, length: usize) -> CallResult {
     // SAFETY: Caller owns the capability and path for the duration of this call.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_FILESYSTEM_UNMOUNT,
+        ffi_native_invoke6(
             directory,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_UNMOUNT,
             path as u64,
             length as u64,
+            0,
             0,
             0,
             0,
@@ -220,13 +229,14 @@ pub unsafe fn native_block_transfer(
 ) -> CallResult {
     // SAFETY: Caller supplies the operation-specific borrowed buffer.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_NATIVE_BLOCK_TRANSFER,
+        ffi_native_invoke6(
             block,
+            abi::HYPER_NATIVE_OP_NATIVE_BLOCK_TRANSFER,
             u64::from(operation),
             first,
             buffer as u64,
             length as u64,
+            0,
             0,
         )
     }
@@ -238,11 +248,12 @@ pub unsafe fn native_block_transfer(
 pub unsafe fn guest_mapping_create(backend: u64, memory: u64, frontend: u64) -> CallResult {
     // SAFETY: caller retains the borrowed input capabilities.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MAPPING_CREATE,
+        ffi_native_invoke6(
             backend,
+            abi::HYPER_NATIVE_OP_GUEST_MAPPING_CREATE,
             memory,
             frontend,
+            0,
             0,
             0,
             0,
@@ -255,9 +266,10 @@ pub unsafe fn guest_mapping_create(backend: u64, memory: u64, frontend: u64) -> 
 pub unsafe fn guest_mapping_release(mapping: u64) -> CallResult {
     // SAFETY: caller retains the borrowed mapping capability.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MAPPING_RELEASE,
+        ffi_native_invoke6(
             mapping,
+            abi::HYPER_NATIVE_OP_GUEST_MAPPING_RELEASE,
+            0,
             0,
             0,
             0,
@@ -280,12 +292,13 @@ pub unsafe fn guest_notification_configure(
 ) -> CallResult {
     // SAFETY: The caller retains the machine handle for the complete call.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_NOTIFICATION_CONFIGURE,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_GUEST_NOTIFICATION_CONFIGURE,
             original_base,
             base,
             u64::from(flags),
+            0,
             0,
             0,
         )
@@ -305,12 +318,13 @@ pub unsafe fn guest_notification_access(
 ) -> CallResult {
     // SAFETY: The caller retains the machine handle for the complete call.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_NOTIFICATION_ACCESS,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_GUEST_NOTIFICATION_ACCESS,
             original_base,
             u64::from(operation),
             u64::from(value),
+            0,
             0,
             0,
         )
@@ -330,13 +344,14 @@ pub unsafe fn guest_memory_transfer(
 ) -> CallResult {
     // SAFETY: The caller supplies valid borrowed handles and a bounded buffer.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MEMORY_TRANSFER,
+        ffi_native_invoke6(
             memory,
+            abi::HYPER_NATIVE_OP_GUEST_MEMORY_TRANSFER,
             u64::from(operation),
             offset,
             buffer as u64,
             length as u64,
+            0,
             0,
         )
     }
@@ -355,13 +370,14 @@ pub unsafe fn guest_memory_scalar(
 ) -> CallResult {
     // SAFETY: The caller supplies a valid borrowed handle; remaining inputs are scalar.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_MEMORY_SCALAR,
+        ffi_native_invoke6(
             memory,
+            abi::HYPER_NATIVE_OP_GUEST_MEMORY_SCALAR,
             u64::from(operation),
             offset,
             u64::from(width),
             value,
+            0,
             0,
         )
     }
@@ -374,10 +390,11 @@ pub unsafe fn guest_memory_scalar(
 pub unsafe fn guest_interrupt_create(machine: u64, irq: u32) -> CallResult {
     // SAFETY: The caller supplies the borrowed handle and scalar IRQ identity.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_INTERRUPT_CREATE,
+        ffi_native_invoke6(
             machine,
+            abi::HYPER_NATIVE_OP_GUEST_INTERRUPT_CREATE,
             u64::from(irq),
+            0,
             0,
             0,
             0,
@@ -393,10 +410,11 @@ pub unsafe fn guest_interrupt_create(machine: u64, irq: u32) -> CallResult {
 pub unsafe fn guest_interrupt_set_level(interrupt: u64, asserted: bool) -> CallResult {
     // SAFETY: The caller supplies the borrowed handle; level is a canonical boolean.
     unsafe {
-        ffi_native_call6(
-            abi::HYPER_NATIVE_SYS_GUEST_INTERRUPT_SET_LEVEL,
+        ffi_native_invoke6(
             interrupt,
+            abi::HYPER_NATIVE_OP_GUEST_INTERRUPT_SET_LEVEL,
             u64::from(asserted),
+            0,
             0,
             0,
             0,
