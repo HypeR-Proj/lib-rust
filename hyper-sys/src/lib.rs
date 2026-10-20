@@ -59,6 +59,7 @@ pub use handle::{
 };
 pub use hyper_abi as abi;
 pub use inspect::{
+    cpu_inspector_profile_read, cpu_inspector_profile_start, cpu_inspector_profile_stop,
     cpu_inspector_read, memory_inspector_read, memory_inspector_read_statistics,
     object_inspector_derive_process, object_inspector_derive_resource_domain,
     object_inspector_derive_task_group, object_inspector_read_details,

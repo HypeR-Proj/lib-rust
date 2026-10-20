@@ -283,3 +283,72 @@ pub unsafe fn memory_inspector_read_statistics(
         )
     }
 }
+
+/// Starts one bounded global PMU capture with explicit configuration authority.
+/// # Safety
+/// The inspector must remain live with `SET_ATTRIBUTES` rights.
+pub unsafe fn cpu_inspector_profile_start(
+    inspector: abi::HyperNativeHandle,
+    period: u64,
+    seconds: u64,
+) -> CallResult {
+    // SAFETY: The caller supplies the borrowed authority; arguments are scalars.
+    unsafe {
+        ffi_native_invoke6(
+            inspector,
+            abi::HYPER_NATIVE_OP_CPU_INSPECTOR_PROFILE_START,
+            period,
+            seconds,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+/// Requests PMU stop. BUSY means one or more CPUs still need to acknowledge.
+/// # Safety
+/// The inspector must remain live with `SET_ATTRIBUTES` rights.
+pub unsafe fn cpu_inspector_profile_stop(
+    inspector: abi::HyperNativeHandle,
+    generation: u64,
+) -> CallResult {
+    // SAFETY: The caller supplies the borrowed authority; generation is a scalar.
+    unsafe {
+        ffi_native_invoke6(
+            inspector,
+            abi::HYPER_NATIVE_OP_CPU_INSPECTOR_PROFILE_STOP,
+            generation,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+/// Reads PMU metadata (`cpu=u64::MAX`) or one bounded call-chain record.
+/// # Safety
+/// The inspector needs `INSPECT_DETAILS`; output must span size writable bytes.
+pub unsafe fn cpu_inspector_profile_read(
+    inspector: abi::HyperNativeHandle,
+    generation: u64,
+    cpu: u64,
+    cursor: u64,
+    output: *mut u8,
+    size: usize,
+) -> CallResult {
+    // SAFETY: The caller owns the complete output range for this invocation.
+    unsafe {
+        ffi_native_invoke6(
+            inspector,
+            abi::HYPER_NATIVE_OP_CPU_INSPECTOR_PROFILE_READ,
+            generation,
+            cpu,
+            cursor,
+            output.addr() as u64,
+            size as u64,
+            0,
+        )
+    }
+}

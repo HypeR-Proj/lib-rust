@@ -9,6 +9,7 @@
 
 mod details;
 pub mod memory;
+pub mod profile;
 pub use details::{
     DetailCursor, DetailRecord, DetailTarget, DeviceState, MappingPermissions, ObjectDetails,
     UserThreadPhase,
@@ -508,7 +509,7 @@ impl MemoryInspector {
     }
 }
 
-/// Immutable scheduler CPU-time observation authority.
+/// Scheduler CPU-time observation and optional, separately authorized PMU control.
 pub struct CpuInspector {
     handle: OwnedHandle<CpuInspectorObject>,
 }
