@@ -9,6 +9,7 @@ use core::ffi::c_void;
 unsafe extern "C" {
     fn hyper_alloc(size: usize, alignment: usize) -> *mut c_void;
     fn hyper_free(pointer: *mut c_void);
+    fn hyper_heap_trim() -> usize;
     fn hyper_realloc(pointer: *mut c_void, size: usize, alignment: usize) -> *mut c_void;
 }
 
@@ -36,4 +37,13 @@ unsafe impl GlobalAlloc for NativeAllocator {
         // nonzero replacement size; libhyper retains pointer on failure.
         unsafe { hyper_realloc(pointer.cast(), new_size, layout.align()).cast() }
     }
+}
+
+/// Returns wholly free retained heap regions to the kernel.
+///
+/// Live allocations are unaffected. Concurrent threads may immediately reuse
+/// capacity, so the returned byte count is not an idle-memory guarantee.
+pub fn trim() -> usize {
+    // SAFETY: libhyper serializes arenas and releases only wholly free regions.
+    unsafe { hyper_heap_trim() }
 }

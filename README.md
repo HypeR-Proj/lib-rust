@@ -59,8 +59,11 @@ let bytes: Vec<u8> = [b"hyper> ".as_slice(), message.as_bytes()].concat();
 
 `hyper_rt::alloc` also re-exports the crate. This provides `String`, `Vec`,
 `Box`, collections, `.concat()`, and `format!`; the freestanding mode does not provide `std` or
-POSIX APIs. The allocator supports over-aligned Rust layouts, reclaims empty
-mapped regions, and preserves the original buffer when reallocation fails.
+POSIX APIs. The allocator supports over-aligned Rust layouts and preserves the
+original buffer when reallocation fails. Its eight arenas retain at most 512 KiB
+of wholly free regions per process. `hyper_os::memory::trim_heap()` (or the
+low-level `hyper_sys::allocator::trim()`) releases that idle capacity; thread
+detach and allocation failure also trim. Live allocations remain valid.
 Use fallible collection APIs such as `try_reserve` where OOM is recoverable;
 infallible allocation failure follows Rust's allocation-error path and the
 runtime's aborting panic policy. Memory use remains charged to the process's
