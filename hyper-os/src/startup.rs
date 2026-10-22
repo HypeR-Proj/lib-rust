@@ -21,10 +21,27 @@ use crate::{Error, Result};
 /// This role is opaque to the kernel and grants no ambient path access.
 pub const CHILD_LOADER: StartupPurpose<FileObject> = StartupPurpose::new(0x8004_0003);
 
-/// Immutable firmware command line supplied to the initial Native process.
+/// Immutable unconsumed boot arguments supplied to a boot-stage successor.
 /// This does not grant ambient configuration or device access.
 pub const BOOT_COMMAND_LINE: StartupPurpose<VmoObject> =
     StartupPurpose::new(hyper_abi::HYPER_NATIVE_STARTUP_HANDLE_PURPOSE_BOOT_COMMAND_LINE as u32);
+
+/// Prepares remaining boot arguments for a successor's startup table.
+///
+/// The returned immutable VMO has READ, INSPECT and TRANSFER rights. Move it
+/// under [`BOOT_COMMAND_LINE`], attenuating to READ | INSPECT for the receiver.
+/// No writable source handle survives this call, including its error paths.
+pub fn create_boot_command_line(text: &str) -> Result<OwnedHandle<VmoObject>> {
+    let (payload, length) = boot_command_line_payload(text)?;
+    let source = crate::memory::WritableVmo::create(crate::memory::PAGE_SIZE)?;
+    source.write_all_at(0, &payload[..length])?;
+    let snapshot = crate::memory::SnapshotVmo::from_vmo(source.as_handle_ref())?;
+    snapshot.as_handle_ref().duplicate(
+        crate::Rights::READ
+            .union(crate::Rights::INSPECT)
+            .union(crate::Rights::TRANSFER),
+    )
+}
 
 const _: () = assert!(hyper_abi::HYPER_NATIVE_STARTUP_MAX_HANDLES <= usize::MAX as u64);
 const MAX_STARTUP_HANDLES: usize = hyper_abi::HYPER_NATIVE_STARTUP_MAX_HANDLES as usize;
@@ -174,11 +191,12 @@ impl<'runtime> Startup<'runtime> {
         string.to_str().map_err(|_| Error::InvalidStartup)
     }
 
-    /// Consumes the optional firmware command-line capability and copies its text.
+    /// Consumes the optional boot-argument capability and copies its text.
     ///
-    /// The kernel supplies this only to its initial process. Custom parents may
-    /// omit it; an absent capability is distinct from a malformed present one.
-    /// Selection of boot profiles or other policy remains the caller's concern.
+    /// The kernel supplies remaining arguments to its initial process; boot
+    /// stages may pass their own remainder to a successor. An absent capability
+    /// is distinct from a malformed present one. The handle is closed on both
+    /// success and failure. Parameter interpretation remains the caller's policy.
     pub fn take_boot_command_line(&mut self) -> Result<Option<alloc::string::String>> {
         let Some(handle) = self.take_optional(BOOT_COMMAND_LINE)? else {
             return Ok(None);
@@ -389,17 +407,29 @@ fn validate_kind<T: TypedObject>(raw: NonZeroU64) -> Result<()> {
     }
 }
 
+const BOOT_ARGUMENT_MAX: usize = hyper_abi::HYPER_NATIVE_BOOT_COMMAND_LINE_MAX_BYTES as usize;
+const _: () = assert!(8 + BOOT_ARGUMENT_MAX <= crate::memory::PAGE_SIZE as usize);
+
+fn boot_command_line_payload(text: &str) -> Result<([u8; 8 + BOOT_ARGUMENT_MAX], usize)> {
+    if text.len() > BOOT_ARGUMENT_MAX || text.as_bytes().contains(&0) {
+        return Err(Error::InvalidStartup);
+    }
+    let mut payload = [0; 8 + BOOT_ARGUMENT_MAX];
+    payload[..8].copy_from_slice(&(text.len() as u64).to_le_bytes());
+    payload[8..8 + text.len()].copy_from_slice(text.as_bytes());
+    Ok((payload, 8 + text.len()))
+}
+
 fn read_boot_command_line(
     mut read: impl FnMut(u64, &mut [u8]) -> Result<()>,
 ) -> Result<alloc::string::String> {
-    const MAX: usize = hyper_abi::HYPER_NATIVE_BOOT_COMMAND_LINE_MAX_BYTES as usize;
     let mut length = [0; 8];
     read(0, &mut length)?;
     let length = usize::try_from(u64::from_le_bytes(length)).map_err(|_| Error::InvalidStartup)?;
-    if length > MAX {
+    if length > BOOT_ARGUMENT_MAX {
         return Err(Error::InvalidStartup);
     }
-    let mut bytes = [0; MAX];
+    let mut bytes = [0; BOOT_ARGUMENT_MAX];
     if length != 0 {
         read(8, &mut bytes[..length])?;
     }
@@ -422,6 +452,36 @@ mod tests {
     use crate::handle::ByteChannelObject;
 
     const SERVICE_ENDPOINT: StartupPurpose<ByteChannelObject> = StartupPurpose::new(0x4859_0100);
+
+    #[test]
+    fn boot_argument_payload_validates_and_roundtrips() -> Result<(), Error> {
+        for text in [
+            alloc::string::String::from("bad\0argument"),
+            "x".repeat(hyper_abi::HYPER_NATIVE_BOOT_COMMAND_LINE_MAX_BYTES as usize + 1),
+        ] {
+            assert!(matches!(
+                super::boot_command_line_payload(&text),
+                Err(Error::InvalidStartup)
+            ));
+        }
+        for text in [
+            "",
+            "key=one key=two unicode=λ",
+            &"x".repeat(super::BOOT_ARGUMENT_MAX),
+        ] {
+            let (payload, length) = super::boot_command_line_payload(text)?;
+            assert_eq!(length, text.len() + 8);
+            let decoded = super::read_boot_command_line(|offset, output| {
+                let source = payload
+                    .get(offset as usize..offset as usize + output.len())
+                    .ok_or(Error::InvalidStartup)?;
+                output.copy_from_slice(source);
+                Ok(())
+            })?;
+            assert_eq!(decoded, text);
+        }
+        Ok(())
+    }
 
     #[test]
     fn boot_command_line_is_bounded_utf8_without_nul() -> Result<(), Error> {
