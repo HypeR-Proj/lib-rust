@@ -280,7 +280,7 @@ pub struct ThreadObservation {
     pub name: TaskName,
     pub role: ThreadRole,
     pub registry_phase: ThreadRegistryPhase,
-    pub runtime_ticks: u64,
+    pub runtime_ns: u64,
 }
 
 /// Physical allocation counters plus independently sampled reclaimability.
@@ -325,12 +325,11 @@ pub struct MemoryObservation {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CpuObservation {
     pub captured_at_ns: u64,
-    pub ticks_per_second: u64,
     pub online_cpus: u64,
-    pub idle_ticks: u64,
-    pub kernel_thread_ticks: u64,
-    pub user_thread_ticks: u64,
-    pub vcpu_ticks: u64,
+    pub idle_ns: u64,
+    pub kernel_thread_ns: u64,
+    pub user_thread_ns: u64,
+    pub vcpu_ns: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -419,7 +418,7 @@ impl TaskInspector {
                 name: TaskName::decode(record.name, record.name_length)?,
                 role: ThreadRole::decode(record.role)?,
                 registry_phase: ThreadRegistryPhase::decode(record.registry_phase)?,
-                runtime_ticks: record.runtime_ticks,
+                runtime_ns: record.runtime_ns,
             })?;
         }
         Ok(page)
@@ -528,17 +527,16 @@ impl CpuInspector {
         };
         let _supported_size =
             crate::validate_info_result(result, hyper_abi::HYPER_NATIVE_CPU_OBSERVATION_MIN_SIZE)?;
-        if record.reserved != 0 || record.ticks_per_second == 0 || record.online_cpus == 0 {
+        if record.reserved != 0 || record.reserved_clock != 0 || record.online_cpus == 0 {
             return Err(Error::InvalidResponse);
         }
         Ok(CpuObservation {
             captured_at_ns: record.captured_at_ns,
-            ticks_per_second: record.ticks_per_second,
             online_cpus: record.online_cpus,
-            idle_ticks: record.idle_ticks,
-            kernel_thread_ticks: record.kernel_thread_ticks,
-            user_thread_ticks: record.user_thread_ticks,
-            vcpu_ticks: record.vcpu_ticks,
+            idle_ns: record.idle_ns,
+            kernel_thread_ns: record.kernel_thread_ns,
+            user_thread_ns: record.user_thread_ns,
+            vcpu_ns: record.vcpu_ns,
         })
     }
 }
@@ -783,7 +781,7 @@ const ZERO_THREAD: hyper_abi::HyperNativeTaskThread = hyper_abi::HyperNativeTask
     registry_phase: 0,
     name_length: 0,
     reserved: 0,
-    runtime_ticks: 0,
+    runtime_ns: 0,
     name: [0; 64],
 };
 
@@ -811,12 +809,12 @@ const ZERO_MEMORY: hyper_abi::HyperNativeMemoryObservation =
 
 const ZERO_CPU: hyper_abi::HyperNativeCpuObservation = hyper_abi::HyperNativeCpuObservation {
     captured_at_ns: 0,
-    ticks_per_second: 0,
+    reserved_clock: 0,
     online_cpus: 0,
-    idle_ticks: 0,
-    kernel_thread_ticks: 0,
-    user_thread_ticks: 0,
-    vcpu_ticks: 0,
+    idle_ns: 0,
+    kernel_thread_ns: 0,
+    user_thread_ns: 0,
+    vcpu_ns: 0,
     reserved: 0,
 };
 

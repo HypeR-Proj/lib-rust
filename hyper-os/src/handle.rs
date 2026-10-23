@@ -100,6 +100,11 @@ impl Rights {
     /// May configure bounded diagnostic retention for a child before start.
     pub const RETAIN_PROCESS: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_RETAIN_PROCESS);
     pub const RETIRE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_RETIRE);
+    pub const SCHED_LOWER: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SCHED_LOWER);
+    pub const SCHED_PRIORITY: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SCHED_PRIORITY);
+    pub const SCHED_CLASS: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SCHED_CLASS);
+    pub const SCHED_BUDGET: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SCHED_BUDGET);
+
     pub const PROTECT: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_PROTECT);
     pub const CREATE_VIRTUAL_MACHINE: Self =
         Self(hyper_abi::HYPER_NATIVE_RIGHT_CREATE_VIRTUAL_MACHINE);
@@ -189,6 +194,10 @@ const RIGHT_NAMES: &[(Rights, &str)] = &[
     (Rights::PROTECT, "protect"),
     (Rights::LOCK_MEMORY, "lock-memory"),
     (Rights::RETAIN_PROCESS, "retain-process"),
+    (Rights::SCHED_LOWER, "sched-lower"),
+    (Rights::SCHED_PRIORITY, "sched-priority"),
+    (Rights::SCHED_CLASS, "sched-class"),
+    (Rights::SCHED_BUDGET, "sched-budget"),
     (Rights::RETIRE, "retire"),
     (Rights::MANAGE_NAMESPACE, "manage-namespace"),
     (Rights::CREATE_VIRTUAL_MACHINE, "create-virtual-machine"),

@@ -21,6 +21,8 @@ mod inspect;
 mod ipc;
 mod memory;
 mod retirement;
+mod scheduling;
+pub use scheduling::*;
 mod startup;
 mod system;
 mod task;

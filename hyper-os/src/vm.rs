@@ -29,7 +29,8 @@ const VCPU_RIGHTS: Rights = Rights::TRANSFER
     .union(Rights::WRITE)
     .union(Rights::WAIT)
     .union(Rights::INSPECT)
-    .union(Rights::START);
+    .union(Rights::START)
+    .union(Rights::SCHED_LOWER);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -629,7 +630,16 @@ fn validate_adopted<T: TypedObject>(
     rights: Rights,
 ) -> Result<OwnedHandle<T>> {
     let info = owner.info()?;
-    if info.rights != rights {
+    let allowed = if T::KIND == VirtualMachineCreationLeaseObject::KIND
+        || T::KIND == PendingVirtualMachineObject::KIND
+        || T::KIND == VirtualMachineObject::KIND
+        || T::KIND == VirtualCpuObject::KIND
+    {
+        rights.union(crate::scheduling::RIGHTS)
+    } else {
+        rights
+    };
+    if !info.rights.contains(rights) || !allowed.contains(info.rights) {
         return Err(Error::InvalidResponse);
     }
     owner.downcast::<T>().map_err(|failure| failure.error())

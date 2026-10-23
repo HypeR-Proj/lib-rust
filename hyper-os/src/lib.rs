@@ -29,6 +29,7 @@ mod launch_data;
 pub mod memory;
 mod relay;
 pub mod retirement;
+pub mod scheduling;
 pub mod startup;
 mod status;
 pub mod stream;

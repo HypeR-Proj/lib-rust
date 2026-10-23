@@ -256,6 +256,7 @@ impl ProcessBuilder {
             || !BUILDER_RIGHTS
                 .union(Rights::LOCK_MEMORY)
                 .union(Rights::RETAIN_PROCESS)
+                .union(crate::scheduling::RIGHTS)
                 .contains(rights)
         {
             return Err(Error::InvalidResponse);
@@ -331,6 +332,29 @@ impl ProcessBuilder {
     }
 
     /// Replaces the CPU affinity bitmap.
+    /// Configures the initial thread and explicitly delegates scheduling rights.
+    /// The builder must hold every delegated right and every right needed by
+    /// the complete configuration change. Ordinary WRITE is insufficient.
+    pub fn set_scheduling(
+        &self,
+        parameters: crate::scheduling::Parameters,
+        delegated: Rights,
+    ) -> Result<()> {
+        if !crate::scheduling::RIGHTS.contains(delegated) {
+            return Err(Error::Status(Status::INVALID_ARGUMENT));
+        }
+        let raw = parameters.encode()?;
+        // SAFETY: builder and the encoded record remain live throughout the call.
+        Status::from_raw(unsafe {
+            hyper_sys::process_builder_set_scheduling(
+                self.handle.as_handle_ref().raw().get(),
+                &raw,
+                delegated.bits(),
+            )
+        })
+        .into_result()
+    }
+
     pub fn set_affinity(&self, words: &[u64]) -> Result<()> {
         if words.is_empty() || words.len() > MAX_AFFINITY_WORDS {
             return Err(Error::InvalidProcessAffinity);
