@@ -10,6 +10,7 @@
 mod details;
 pub mod memory;
 pub mod profile;
+pub mod trace;
 pub use details::{
     DetailCursor, DetailRecord, DetailTarget, DeviceState, MappingPermissions, ObjectDetails,
     UserThreadPhase,
