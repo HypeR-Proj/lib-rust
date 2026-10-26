@@ -152,3 +152,25 @@ pub unsafe fn capability_channel_receive(
         )
     }
 }
+
+/// Annotate an explicit RPC without changing transport state or capture admission.
+/// # Safety
+/// `endpoint` must remain a live `ByteChannel` with `READ|WRITE` throughout this call.
+pub unsafe fn byte_channel_trace_rpc(
+    endpoint: abi::HyperNativeHandle,
+    arguments: [u64; 6],
+) -> CallResult {
+    // SAFETY: the caller retains endpoint authority; all payloads are scalars.
+    unsafe {
+        ffi_native_invoke6(
+            endpoint,
+            abi::HYPER_NATIVE_OP_BYTE_CHANNEL_TRACE_RPC,
+            arguments[0],
+            arguments[1],
+            arguments[2],
+            arguments[3],
+            arguments[4],
+            arguments[5],
+        )
+    }
+}

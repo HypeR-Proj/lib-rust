@@ -4,6 +4,8 @@
 //! Safe handle-free `ByteChannel` message transport.
 
 pub use crate::relay::ByteRelay;
+mod tracing;
+pub use tracing::{RpcContext, RpcTracer};
 
 use crate::handle::{ByteChannelObject, HandleRef, OwnedHandle};
 use crate::{Error, Result, Status};

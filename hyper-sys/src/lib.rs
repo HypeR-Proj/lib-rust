@@ -71,8 +71,8 @@ pub use inspect::{
     task_inspector_scan_processes, task_inspector_scan_threads,
 };
 pub use ipc::{
-    byte_channel_create, byte_channel_read, byte_channel_write, capability_channel_create,
-    capability_channel_receive, capability_channel_try_send,
+    byte_channel_create, byte_channel_read, byte_channel_trace_rpc, byte_channel_write,
+    capability_channel_create, capability_channel_receive, capability_channel_try_send,
 };
 pub use memory::{
     vmar_allocate, vmar_destroy, vmar_lock_memory, vmar_map, vmar_map_file, vmar_map_private,
