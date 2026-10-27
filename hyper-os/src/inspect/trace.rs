@@ -4,7 +4,7 @@
 //! System-wide static tracepoints, independent of PMU sampling. Configuration
 //! requires `SET_ATTRIBUTES`; records and names require `INSPECT_DETAILS`. Captures
 //! have an enforced deadline and per-CPU overwrite/loss reporting.
-use super::CpuInspector;
+use super::{CpuInspector, Koid};
 use crate::{Error, Result};
 pub use hyper_abi::{HyperNativeTraceConfig as TraceConfig, HyperNativeTraceInfo as TraceInfo};
 
@@ -221,6 +221,19 @@ impl CpuInspector {
         string(&value.name)?;
         Ok(TraceThreadName(value.name))
     }
+
+    /// Resolves a live scheduler `ThreadId` to its canonical KOID and name.
+    /// Both IDs are observations only. A retired Thread may be `NOT_FOUND`;
+    /// kernels without this optional query may return `INVALID_ARGUMENT`.
+    pub fn trace_thread_details(&self, generation: u64, thread: u64) -> Result<TraceThreadDetails> {
+        let mut value = hyper_abi::HyperNativeTraceThreadDetails {
+            thread: 0,
+            koid: 0,
+            name: [0; 64],
+        };
+        self.trace_read_raw(generation, u64::MAX - 2, thread, &mut value)?;
+        TraceThreadDetails::decode(thread, value)
+    }
     // Only instantiated with the padding-free fixed ABI records above.
     fn trace_read_raw<T>(
         &self,
@@ -251,8 +264,51 @@ impl TraceThreadName {
     }
 }
 
+pub struct TraceThreadDetails {
+    koid: Koid,
+    name: [u8; 64],
+}
+impl TraceThreadDetails {
+    fn decode(thread: u64, value: hyper_abi::HyperNativeTraceThreadDetails) -> Result<Self> {
+        if value.thread != thread {
+            return Err(Error::InvalidResponse);
+        }
+        string(&value.name)?;
+        Ok(Self {
+            koid: Koid::from_raw(value.koid)?,
+            name: value.name,
+        })
+    }
+    pub fn koid(&self) -> Koid {
+        self.koid
+    }
+    pub fn name(&self) -> &str {
+        string(&self.name).unwrap_or("")
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn trace_identity_join_validates_both_namespaces() -> crate::Result<()> {
+        let mut record = hyper_abi::HyperNativeTraceThreadDetails {
+            thread: 0x0100_0001,
+            koid: 7,
+            name: [0; 64],
+        };
+        let observed = super::TraceThreadDetails::decode(record.thread, record)?;
+        assert_eq!(observed.koid().get(), 7);
+        assert!(matches!(
+            super::TraceThreadDetails::decode(9, record),
+            Err(crate::Error::InvalidResponse)
+        ));
+        record.koid = 0;
+        assert!(matches!(
+            super::TraceThreadDetails::decode(record.thread, record),
+            Err(crate::Error::InvalidResponse)
+        ));
+        Ok(())
+    }
     use super::*;
     #[test]
     fn records_reject_invalid_metadata_and_keep_full_width_ids() -> Result<()> {
