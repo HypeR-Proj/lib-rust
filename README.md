@@ -162,6 +162,36 @@ With the optional `hyper-os/std` feature on HypeR targets,
 close, starts at offset zero, and preserves the original rights. Subsequent
 I/O uses std; Native capability acquisition and delegation remain explicit.
 
+## Filesystem block queues
+
+`block::BlockQueue` derives a bounded logical producer from an exclusive
+`NativeBlock` capability. Ordinary `submit_read` / `submit_write` submissions
+own their kernel payload until collection; waiting does not consume a result.
+`wait_space` waits for one admission slot and an exact payload size without
+reserving either. Callers retry submission after waking and collect their
+completed tickets to return credits.
+
+Filesystem providers can export one queue-owned source window with
+`create_window`. `filesystem::SharedBuffer::from_readonly_memory` returns a
+separate `ReadonlyBuffer`; it offers no mutable-slice accessor, and the kernel
+rejects writable mappings of the underlying VMO. The provider passes the queue
+as `Some(queue)` to `filesystem::mount` alongside its channel and writable
+metadata buffer. Non-block providers pass `None` and retain buffered RPC payload
+transport with a zero write token; they have no physical-extent authority.
+A write RPC supplies an operation token. `submit_window(token, ranges)` refers
+to that window through `WindowWrite { first, offset, bytes }` descriptors rather
+than copying payload through the provider. All accepted writes must complete
+before the provider replies. Invented, expired or out-of-range tokens/ranges
+are rejected. Closing a queue does not revoke already mapped readonly storage.
+
+`hyper-filesystem::protocol::ReadExtentPlan` describes a bounded prefix using
+physical byte offsets within the mount's authorized block volume, including
+partial-sector tails. It contains no pointers or writable destination grants.
+The kernel validates and executes the plan into its own request/cache pages.
+Providers that transform bytes can return `Unsupported` to use buffered reads.
+See [block I/O](../../docs/design/storage/block-io.md) for copy boundaries,
+ordering, failure and quota semantics.
+
 ## Explicit memory residency
 
 `hyper_os::memory::{lock_memory, unlock_memory}` operate on a nonempty,

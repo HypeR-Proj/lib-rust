@@ -11,6 +11,7 @@
 
 pub mod allocator;
 
+mod block_queue;
 mod console;
 mod device;
 mod ffi;
@@ -29,6 +30,10 @@ mod task;
 mod vm;
 mod wait;
 
+pub use block_queue::{
+    block_queue_create, block_queue_create_window, block_queue_info, block_queue_reap,
+    block_queue_submit, block_queue_submit_window, block_queue_wait, block_queue_wait_space,
+};
 pub use console::{
     console_discard_input, console_read, console_write, virtual_serial_acknowledge_output,
     virtual_serial_create, virtual_serial_register_output, virtual_serial_write,
@@ -62,13 +67,13 @@ pub use handle::{
 pub use hyper_abi as abi;
 pub use inspect::{
     cpu_inspector_profile_read, cpu_inspector_profile_start, cpu_inspector_profile_stop,
-    cpu_inspector_read, cpu_inspector_trace_read, cpu_inspector_trace_start,
-    cpu_inspector_trace_stop, memory_inspector_read, memory_inspector_read_statistics,
-    object_inspector_derive_process, object_inspector_derive_resource_domain,
-    object_inspector_derive_task_group, object_inspector_read_details,
-    object_inspector_scan_handles, object_inspector_scan_objects, task_inspector_derive_process,
-    task_inspector_derive_resource_domain, task_inspector_derive_task_group,
-    task_inspector_scan_processes, task_inspector_scan_threads,
+    cpu_inspector_read, cpu_inspector_trace_clear, cpu_inspector_trace_read,
+    cpu_inspector_trace_start, cpu_inspector_trace_stop, memory_inspector_read,
+    memory_inspector_read_statistics, object_inspector_derive_process,
+    object_inspector_derive_resource_domain, object_inspector_derive_task_group,
+    object_inspector_read_details, object_inspector_scan_handles, object_inspector_scan_objects,
+    task_inspector_derive_process, task_inspector_derive_resource_domain,
+    task_inspector_derive_task_group, task_inspector_scan_processes, task_inspector_scan_threads,
 };
 pub use ipc::{
     byte_channel_create, byte_channel_read, byte_channel_trace_rpc, byte_channel_write,

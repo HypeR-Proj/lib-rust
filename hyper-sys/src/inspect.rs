@@ -396,6 +396,27 @@ pub unsafe fn cpu_inspector_trace_stop(
         )
     }
 }
+/// Releases a stopped capture; active captures are rejected with BUSY.
+/// # Safety
+/// The inspector must remain live with `SET_ATTRIBUTES` rights.
+pub unsafe fn cpu_inspector_trace_clear(
+    inspector: abi::HyperNativeHandle,
+    generation: u64,
+) -> CallResult {
+    // SAFETY: The caller supplies the borrowed authority; generation is a scalar.
+    unsafe {
+        ffi_native_invoke6(
+            inspector,
+            abi::HYPER_NATIVE_OP_CPU_INSPECTOR_TRACE_CLEAR,
+            generation,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
 /// Reads trace metadata (`cpu=u64::MAX`), a thread name (`cpu=u64::MAX-1`),
 /// or a bounded batch of events for an online CPU.
 /// # Safety

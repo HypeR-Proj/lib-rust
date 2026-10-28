@@ -179,6 +179,7 @@ pub unsafe fn native_block_activate(block: u64, readonly: bool) -> CallResult {
 pub unsafe fn filesystem_mount(
     channel: u64,
     buffer: u64,
+    queue: u64,
     directory: u64,
     path: *const u8,
     length: usize,
@@ -194,7 +195,7 @@ pub unsafe fn filesystem_mount(
             path as u64,
             length as u64,
             u64::from(read_only),
-            0,
+            queue,
         )
     }
 }

@@ -7,16 +7,22 @@ pub use namespace::{begin_root_switch, finish_root_switch, mount_ramfs, switch_r
 
 use crate::{
     Error, Result, Status,
-    handle::{ByteChannelObject, DirectoryObject, HandleRef, OwnedHandle, VmarObject, VmoObject},
+    handle::{
+        BlockQueueObject, ByteChannelObject, DirectoryObject, HandleRef, OwnedHandle, VmarObject,
+        VmoObject,
+    },
     memory::WritableVmo,
 };
 
 /// Mount an ordered filesystem endpoint. Keep its handle alive for the mount's
 /// entire lifetime; closure permanently disconnects that filesystem generation.
 /// Both processes must implement the shared-buffer request ownership protocol.
+/// A block queue selects immutable write windows and physical read plans;
+/// `None` selects buffered requests for providers without a block device.
 pub fn mount(
     channel: HandleRef<'_, ByteChannelObject>,
     buffer: HandleRef<'_, VmoObject>,
+    queue: Option<HandleRef<'_, BlockQueueObject>>,
     directory: HandleRef<'_, DirectoryObject>,
     path: &str,
     read_only: bool,
@@ -26,6 +32,7 @@ pub fn mount(
         hyper_sys::filesystem_mount(
             channel.raw().get(),
             buffer.raw().get(),
+            queue.map_or(0, |queue| queue.raw().get()),
             directory.raw().get(),
             path.as_ptr(),
             path.len(),
@@ -71,6 +78,36 @@ impl SharedBuffer {
         memory: OwnedHandle<VmoObject>,
         size: usize,
     ) -> Result<Self> {
+        Self::map(
+            root,
+            memory,
+            size,
+            hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_READ
+                | hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_WRITE,
+        )
+    }
+
+    /// Map a kernel-filled payload window without exposing mutable slices.
+    pub fn from_readonly_memory(
+        root: HandleRef<'_, VmarObject>,
+        memory: OwnedHandle<VmoObject>,
+        size: usize,
+    ) -> Result<ReadonlyBuffer> {
+        Self::map(
+            root,
+            memory,
+            size,
+            hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_READ,
+        )
+        .map(|inner| ReadonlyBuffer { inner })
+    }
+
+    fn map(
+        root: HandleRef<'_, VmarObject>,
+        memory: OwnedHandle<VmoObject>,
+        size: usize,
+        permissions: u64,
+    ) -> Result<Self> {
         if size == 0
             || size > isize::MAX as usize
             || !size.is_multiple_of(crate::memory::PAGE_SIZE as usize)
@@ -107,8 +144,7 @@ impl SharedBuffer {
                 0,
                 address as u64,
                 size as u64,
-                hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_READ
-                    | hyper_abi::HYPER_NATIVE_VMAR_PERMISSION_WRITE,
+                permissions,
             )
         };
         Status::from_raw(result).into_result()?;
@@ -140,5 +176,25 @@ impl Drop for SharedBuffer {
         }
         // SAFETY: Owned child reservation is no longer used by this wrapper.
         let _ = unsafe { hyper_sys::vmar_destroy(self.region.as_handle_ref().raw().get()) };
+    }
+}
+
+/// Read-only view of a kernel-owned request window. It has no mutable accessor.
+pub struct ReadonlyBuffer {
+    inner: SharedBuffer,
+}
+impl ReadonlyBuffer {
+    pub fn memory(&self) -> &OwnedHandle<VmoObject> {
+        self.inner.memory()
+    }
+
+    /// # Safety
+    /// The caller must hold the active request lease: the kernel must neither
+    /// refill nor retire the window until this borrow ends. Read-only mapping
+    /// permissions alone do not establish cross-process Rust aliasing safety.
+    pub unsafe fn bytes(&self) -> &[u8] {
+        // SAFETY: The mapping owner outlives this borrow; the caller establishes
+        // the producer/consumer phase and excludes concurrent kernel mutation.
+        unsafe { core::slice::from_raw_parts(self.inner.address as *const u8, self.inner.size) }
     }
 }

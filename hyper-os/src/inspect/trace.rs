@@ -149,6 +149,17 @@ impl CpuInspector {
         };
         crate::Status::from_raw(result.status).into_result()
     }
+    /// Releases a stopped capture and invalidates its generation. Active captures return BUSY.
+    pub fn trace_clear(&self, generation: u64) -> Result<()> {
+        // SAFETY: The inspector remains live; the generation is a scalar token.
+        let result = unsafe {
+            hyper_sys::cpu_inspector_trace_clear(
+                self.handle.as_handle_ref().raw().get(),
+                generation,
+            )
+        };
+        crate::Status::from_raw(result.status).into_result()
+    }
     pub fn trace_info(&self) -> Result<TraceInfo> {
         let mut info = TraceInfo {
             generation: 0,

@@ -51,6 +51,12 @@ macro_rules! object_types {
 
 object_types!(
     (
+        BlockQueueObject,
+        HYPER_NATIVE_OBJECT_BLOCK_QUEUE,
+        "block-queue",
+        "bounded asynchronous block I/O queue"
+    ),
+    (
         ExecutionContextObject,
         HYPER_NATIVE_OBJECT_EXECUTION_CONTEXT,
         "execution-context",

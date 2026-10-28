@@ -51,6 +51,22 @@ impl<T: ObjectType> ObjectSignals<T> {
     }
 }
 
+impl ObjectSignals<crate::handle::BlockQueueObject> {
+    /// At least one completed result is available and not claimed by a reaper.
+    pub const COMPLETED: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_BLOCK_QUEUE_COMPLETED);
+    /// Queue and device budgets have one request slot and at least
+    /// `min(512 KiB, queue.byte_limit)` free payload bytes. This conservative
+    /// level does not reserve credits or bypass resource-domain limits. Smaller
+    /// submissions can succeed while clear. Reap completions to return credits;
+    /// use `BlockQueue::wait_space` to wait for a particular submission size.
+    pub const WRITABLE: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_BLOCK_QUEUE_WRITABLE);
+    /// Admission has closed or the device failed; completed results remain reapable.
+    pub const PEER_CLOSED: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_BLOCK_QUEUE_PEER_CLOSED);
+}
+
 impl ObjectSignals<crate::handle::VirtualSerialObject> {
     pub const READABLE: Self =
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_VIRTUAL_SERIAL_READABLE);
