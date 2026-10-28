@@ -6,6 +6,27 @@
 use crate::ffi::ffi_native_invoke6;
 use crate::{CallResult, abi};
 
+/// Requests one bounded synchronous clean-cache fill without pinning pages.
+///
+/// # Safety
+/// `file` must remain live with READ rights for the duration of the call.
+#[inline]
+pub unsafe fn file_prefetch(file: abi::HyperNativeHandle, offset: u64, length: u64) -> CallResult {
+    // SAFETY: the caller retains the File; all remaining arguments are scalars.
+    unsafe {
+        ffi_native_invoke6(
+            file,
+            abi::HYPER_NATIVE_OP_FILE_PREFETCH,
+            offset,
+            length,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
 /// Reads one bounded range from a `File`.
 ///
 /// # Safety

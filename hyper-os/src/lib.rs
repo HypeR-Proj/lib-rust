@@ -9,7 +9,7 @@
 
 #![no_std]
 
-#[cfg(all(feature = "std", target_os = "hyper"))]
+#[cfg(any(feature = "std", test))]
 extern crate std;
 
 extern crate alloc;

@@ -162,6 +162,28 @@ With the optional `hyper-os/std` feature on HypeR targets,
 close, starts at offset zero, and preserves the original rights. Subsequent
 I/O uses std; Native capability acquisition and delegation remain explicit.
 
+## Buffered reads and bounded transfers
+
+`fs::ReadAt` describes exact positioned reads and length queries without a
+cursor, format, or allocation policy. Native `fs::File` implements it using its
+existing READ authority. `fs::BufferedReader` wraps any such source with four
+4 KiB buffers for sparse small reads, reducing syscall overhead above the kernel
+page cache. It is a local read view, not a snapshot or a coherent shared cache:
+create a fresh reader after mutations or hold content protection separately.
+`into_inner()` releases all buffers and recovers the source for large transfers.
+
+With `hyper-os/std`, `fs::transfer::copy_range` copies an exact bounded source
+range to an arbitrary consumer, overlapping reads and consumption using two
+512 KiB buffers and one scoped worker. Small transfers run inline. All source
+reads stay within the selected range; the consumer sees relative offsets. Both
+callbacks must finish using each borrowed slice before returning. On failure,
+already consumed bytes remain committed, channels close and the reader joins
+before the call returns. Consumer unwinding also closes channels before joining.
+VM loading and ordinary `cp` share this implementation, including its alignment
+and cancellation rules. `copy_range_profiled` additionally measures read and
+consumer work; those durations overlap and are not total wall time. Ordinary
+copies perform no profiling clock reads.
+
 ## Filesystem block queues
 
 `block::BlockQueue` derives a bounded logical producer from an exclusive

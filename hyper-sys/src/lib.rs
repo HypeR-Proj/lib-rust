@@ -50,8 +50,8 @@ pub use fs::{
     directory_open_file, directory_open_file_with_options, directory_read, directory_read_link,
     directory_remove, directory_remove_if, directory_rename, directory_scope_create,
     directory_set_metadata, directory_symlink, file_get_info, file_get_metadata, file_lock,
-    file_protect, file_read_at, file_resize, file_set_metadata, file_sync, file_unlock,
-    file_write_at, filesystem_begin_root_switch, filesystem_finish_root_switch,
+    file_prefetch, file_protect, file_read_at, file_resize, file_set_metadata, file_sync,
+    file_unlock, file_write_at, filesystem_begin_root_switch, filesystem_finish_root_switch,
     filesystem_mount_ramfs, filesystem_switch_root,
 };
 pub use guest_io::{

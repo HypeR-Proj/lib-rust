@@ -3,6 +3,13 @@
 
 //! Owned access to capability-relative filesystem objects.
 
+mod buffered;
+mod read_at;
+#[cfg(feature = "std")]
+pub mod transfer;
+pub use buffered::{BufferedReader, Error as BufferedReadError};
+pub use read_at::ReadAt;
+
 mod metadata;
 mod protection;
 pub use metadata::{
@@ -470,6 +477,22 @@ impl File {
             bytes_read: actual,
             file_size: result.value1,
         })
+    }
+
+    /// Fills up to one 512-KiB range of the clean file cache without copying to
+    /// userspace. Returns the completed prefix, possibly zero under pressure or
+    /// for an uncached backend. Pages remain reclaimable immediately on return.
+    /// This does not establish content protection or mapping permissions.
+    pub fn prefetch(&self, offset: u64, length: u64) -> Result<u64> {
+        // SAFETY: the File remains borrowed; the kernel validates scalar bounds.
+        let result = unsafe {
+            hyper_sys::file_prefetch(self.handle.as_handle_ref().raw().get(), offset, length)
+        };
+        Status::from_raw(result.status).into_result()?;
+        if result.value0 > length {
+            return Err(Error::InvalidResponse);
+        }
+        Ok(result.value0)
     }
 
     /// Fills `output`, issuing as many bounded reads as necessary.
