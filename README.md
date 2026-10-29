@@ -211,7 +211,7 @@ physical byte offsets within the mount's authorized block volume, including
 partial-sector tails. It contains no pointers or writable destination grants.
 The kernel validates and executes the plan into its own request/cache pages.
 Providers that transform bytes can return `Unsupported` to use buffered reads.
-See [block I/O](https://github.com/HypeR-Proj/HypeR/blob/main/docs/design/storage/block-io.md) for copy boundaries,
+See [block I/O](https://hyper-proj.github.io/lib-block/docs/block-io.html) for copy boundaries,
 ordering, failure and quota semantics.
 
 ## Explicit memory residency
