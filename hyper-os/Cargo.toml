@@ -1,24 +1,30 @@
 # SPDX-FileCopyrightText: 2026 roolrz
 # SPDX-License-Identifier: Apache-2.0
 
+
 [package]
 name = "hyper-os"
 version = "0.0.0"
 edition = "2024"
 license = "Apache-2.0"
-repository = "https://github.com/HypeR-Proj/rust-lib"
+repository = "https://github.com/HypeR-Proj/lib-rust"
 publish = false
 autotests = false
 description = "Safe operating-system bindings for HypeR Native applications"
+workspace = ".."
 
 [features]
 std = []
 
+[dependencies]
+
 [dependencies.hyper-abi]
-version = "=0.0.0"
+workspace = true
 
 [dependencies.hyper-sys]
 path = "../hyper-sys"
+
+[lints]
 
 [lints.clippy]
 doc_markdown = "deny"
@@ -37,6 +43,4 @@ unsafe_op_in_unsafe_fn = "deny"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = [
-    "cfg(target_os, values(\"hyper\"))",
-]
+check-cfg = ["cfg(target_os, values(\"hyper\"))"]
