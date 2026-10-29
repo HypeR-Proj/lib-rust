@@ -1,17 +1,21 @@
 # SPDX-FileCopyrightText: 2026 roolrz
 # SPDX-License-Identifier: Apache-2.0
 
+
 [package]
 name = "hyper-rt"
 version = "0.0.0"
 edition = "2024"
 license = "Apache-2.0"
-repository = "https://github.com/HypeR-Proj/rust-lib"
+repository = "https://github.com/HypeR-Proj/lib-rust"
 publish = false
 description = "Language runtime entry for freestanding HypeR Native Rust applications"
+workspace = ".."
+
+[dependencies]
 
 [dependencies.hyper-abi]
-version = "=0.0.0"
+workspace = true
 
 [dependencies.hyper-os]
 path = "../hyper-os"
@@ -21,6 +25,8 @@ path = "../hyper-sys"
 
 [features]
 std = []
+
+[lints]
 
 [lints.clippy]
 doc_markdown = "deny"
@@ -39,6 +45,4 @@ unsafe_op_in_unsafe_fn = "deny"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = [
-    "cfg(target_os, values(\"hyper\"))",
-]
+check-cfg = ["cfg(target_os, values(\"hyper\"))"]

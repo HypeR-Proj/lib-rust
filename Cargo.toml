@@ -1,13 +1,10 @@
 # SPDX-FileCopyrightText: 2026 roolrz
 # SPDX-License-Identifier: Apache-2.0
 
+
 [workspace]
 resolver = "3"
-members = [
-    "hyper-os",
-    "hyper-rt",
-    "hyper-sys",
-]
+members = ["hyper-os", "hyper-rt", "hyper-sys", "hyper-filesystem"]
 
 [workspace.package]
 version = "0.0.0"
@@ -17,7 +14,12 @@ repository = "https://github.com/roolrz/HypeR"
 publish = false
 
 [workspace.dependencies]
-hyper-abi = "=0.0.0"
+
+[workspace.dependencies.hyper-abi]
+version = "=0.0.0"
+path = "../../sdk/abi"
+
+[workspace.lints]
 
 [workspace.lints.clippy]
 doc_markdown = "deny"
@@ -36,6 +38,4 @@ unsafe_op_in_unsafe_fn = "deny"
 
 [workspace.lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = [
-    "cfg(target_os, values(\"hyper\"))",
-]
+check-cfg = ["cfg(target_os, values(\"hyper\"))"]

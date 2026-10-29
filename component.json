@@ -1,102 +1,13 @@
 {
   "version": 1,
-  "name": "rust-lib",
+  "name": "lib-rust",
   "kind": "library",
   "origin": {
     "repository": "https://github.com/roolrz/HypeR",
     "commit": "8d42d047058a2b58a291803700e86487fb723f7a"
   },
-  "sources": {
-    "Cargo.lock": "stdlib/rust/Cargo.lock",
-    "Cargo.toml": "stdlib/rust/Cargo.toml",
-    "README.md": "stdlib/rust/README.md",
-    "hyper-os/Cargo.toml": "stdlib/rust/hyper-os/Cargo.toml",
-    "hyper-os/src/abi.rs": "stdlib/rust/hyper-os/src/abi.rs",
-    "hyper-os/src/block/mod.rs": "stdlib/rust/hyper-os/src/block/mod.rs",
-    "hyper-os/src/block/queue.rs": "stdlib/rust/hyper-os/src/block/queue.rs",
-    "hyper-os/src/capability_channel.rs": "stdlib/rust/hyper-os/src/capability_channel.rs",
-    "hyper-os/src/channel.rs": "stdlib/rust/hyper-os/src/channel.rs",
-    "hyper-os/src/channel/tracing.rs": "stdlib/rust/hyper-os/src/channel/tracing.rs",
-    "hyper-os/src/console.rs": "stdlib/rust/hyper-os/src/console.rs",
-    "hyper-os/src/device.rs": "stdlib/rust/hyper-os/src/device.rs",
-    "hyper-os/src/device/fault.rs": "stdlib/rust/hyper-os/src/device/fault.rs",
-    "hyper-os/src/device/firmware.rs": "stdlib/rust/hyper-os/src/device/firmware.rs",
-    "hyper-os/src/device/profile.rs": "stdlib/rust/hyper-os/src/device/profile.rs",
-    "hyper-os/src/error.rs": "stdlib/rust/hyper-os/src/error.rs",
-    "hyper-os/src/filesystem.rs": "stdlib/rust/hyper-os/src/filesystem.rs",
-    "hyper-os/src/filesystem/namespace.rs": "stdlib/rust/hyper-os/src/filesystem/namespace.rs",
-    "hyper-os/src/fs.rs": "stdlib/rust/hyper-os/src/fs.rs",
-    "hyper-os/src/fs/buffered.rs": "stdlib/rust/hyper-os/src/fs/buffered.rs",
-    "hyper-os/src/fs/metadata.rs": "stdlib/rust/hyper-os/src/fs/metadata.rs",
-    "hyper-os/src/fs/protection.rs": "stdlib/rust/hyper-os/src/fs/protection.rs",
-    "hyper-os/src/fs/read_at.rs": "stdlib/rust/hyper-os/src/fs/read_at.rs",
-    "hyper-os/src/fs/transfer.rs": "stdlib/rust/hyper-os/src/fs/transfer.rs",
-    "hyper-os/src/guest_io.rs": "stdlib/rust/hyper-os/src/guest_io.rs",
-    "hyper-os/src/handle.rs": "stdlib/rust/hyper-os/src/handle.rs",
-    "hyper-os/src/handle/object_kind.rs": "stdlib/rust/hyper-os/src/handle/object_kind.rs",
-    "hyper-os/src/inspect.rs": "stdlib/rust/hyper-os/src/inspect.rs",
-    "hyper-os/src/inspect/details.rs": "stdlib/rust/hyper-os/src/inspect/details.rs",
-    "hyper-os/src/inspect/memory.rs": "stdlib/rust/hyper-os/src/inspect/memory.rs",
-    "hyper-os/src/inspect/profile.rs": "stdlib/rust/hyper-os/src/inspect/profile.rs",
-    "hyper-os/src/inspect/trace.rs": "stdlib/rust/hyper-os/src/inspect/trace.rs",
-    "hyper-os/src/launch_data.rs": "stdlib/rust/hyper-os/src/launch_data.rs",
-    "hyper-os/src/lib.rs": "stdlib/rust/hyper-os/src/lib.rs",
-    "hyper-os/src/memory.rs": "stdlib/rust/hyper-os/src/memory.rs",
-    "hyper-os/src/memory/private.rs": "stdlib/rust/hyper-os/src/memory/private.rs",
-    "hyper-os/src/memory/residency.rs": "stdlib/rust/hyper-os/src/memory/residency.rs",
-    "hyper-os/src/memory/shared.rs": "stdlib/rust/hyper-os/src/memory/shared.rs",
-    "hyper-os/src/relay.rs": "stdlib/rust/hyper-os/src/relay.rs",
-    "hyper-os/src/retirement.rs": "stdlib/rust/hyper-os/src/retirement.rs",
-    "hyper-os/src/scheduling.rs": "stdlib/rust/hyper-os/src/scheduling.rs",
-    "hyper-os/src/startup.rs": "stdlib/rust/hyper-os/src/startup.rs",
-    "hyper-os/src/status.rs": "stdlib/rust/hyper-os/src/status.rs",
-    "hyper-os/src/stream.rs": "stdlib/rust/hyper-os/src/stream.rs",
-    "hyper-os/src/system.rs": "stdlib/rust/hyper-os/src/system.rs",
-    "hyper-os/src/task.rs": "stdlib/rust/hyper-os/src/task.rs",
-    "hyper-os/src/thread.rs": "stdlib/rust/hyper-os/src/thread.rs",
-    "hyper-os/src/time.rs": "stdlib/rust/hyper-os/src/time.rs",
-    "hyper-os/src/virtual_serial.rs": "stdlib/rust/hyper-os/src/virtual_serial.rs",
-    "hyper-os/src/vm.rs": "stdlib/rust/hyper-os/src/vm.rs",
-    "hyper-os/src/wait.rs": "stdlib/rust/hyper-os/src/wait.rs",
-    "hyper-os/tests/buffered_read.rs": "stdlib/rust/hyper-os/tests/buffered_read.rs",
-    "hyper-os/tests/device/fault.rs": "stdlib/rust/hyper-os/tests/device/fault.rs",
-    "hyper-os/tests/device/profile.rs": "stdlib/rust/hyper-os/tests/device/profile.rs",
-    "hyper-os/tests/file_transfer.rs": "stdlib/rust/hyper-os/tests/file_transfer.rs",
-    "hyper-os/tests/inspect/details.rs": "stdlib/rust/hyper-os/tests/inspect/details.rs",
-    "hyper-os/tests/memory/shared.rs": "stdlib/rust/hyper-os/tests/memory/shared.rs",
-    "hyper-os/tests/scheduling/records.rs": "stdlib/rust/hyper-os/tests/scheduling/records.rs",
-    "hyper-rt/Cargo.toml": "stdlib/rust/hyper-rt/Cargo.toml",
-    "hyper-rt/src/lib.rs": "stdlib/rust/hyper-rt/src/lib.rs",
-    "hyper-rt/src/process.rs": "stdlib/rust/hyper-rt/src/process.rs",
-    "hyper-sys/Cargo.toml": "stdlib/rust/hyper-sys/Cargo.toml",
-    "hyper-sys/src/allocator.rs": "stdlib/rust/hyper-sys/src/allocator.rs",
-    "hyper-sys/src/block_queue.rs": "stdlib/rust/hyper-sys/src/block_queue.rs",
-    "hyper-sys/src/console.rs": "stdlib/rust/hyper-sys/src/console.rs",
-    "hyper-sys/src/device.rs": "stdlib/rust/hyper-sys/src/device.rs",
-    "hyper-sys/src/ffi.rs": "stdlib/rust/hyper-sys/src/ffi.rs",
-    "hyper-sys/src/fs/directory.rs": "stdlib/rust/hyper-sys/src/fs/directory.rs",
-    "hyper-sys/src/fs/file.rs": "stdlib/rust/hyper-sys/src/fs/file.rs",
-    "hyper-sys/src/fs/mod.rs": "stdlib/rust/hyper-sys/src/fs/mod.rs",
-    "hyper-sys/src/fs/namespace.rs": "stdlib/rust/hyper-sys/src/fs/namespace.rs",
-    "hyper-sys/src/guest_io.rs": "stdlib/rust/hyper-sys/src/guest_io.rs",
-    "hyper-sys/src/handle.rs": "stdlib/rust/hyper-sys/src/handle.rs",
-    "hyper-sys/src/inspect.rs": "stdlib/rust/hyper-sys/src/inspect.rs",
-    "hyper-sys/src/ipc.rs": "stdlib/rust/hyper-sys/src/ipc.rs",
-    "hyper-sys/src/lib.rs": "stdlib/rust/hyper-sys/src/lib.rs",
-    "hyper-sys/src/memory.rs": "stdlib/rust/hyper-sys/src/memory.rs",
-    "hyper-sys/src/retirement.rs": "stdlib/rust/hyper-sys/src/retirement.rs",
-    "hyper-sys/src/scheduling.rs": "stdlib/rust/hyper-sys/src/scheduling.rs",
-    "hyper-sys/src/startup.rs": "stdlib/rust/hyper-sys/src/startup.rs",
-    "hyper-sys/src/system.rs": "stdlib/rust/hyper-sys/src/system.rs",
-    "hyper-sys/src/task.rs": "stdlib/rust/hyper-sys/src/task.rs",
-    "hyper-sys/src/vm.rs": "stdlib/rust/hyper-sys/src/vm.rs",
-    "hyper-sys/src/wait.rs": "stdlib/rust/hyper-sys/src/wait.rs"
-  },
   "SPDX-FileCopyrightText": "2026 roolrz",
   "SPDX-License-Identifier": "Apache-2.0",
-  "mounts": {
-    "": "stdlib/rust"
-  },
   "packages": [],
   "tests": [
     [
@@ -110,102 +21,14 @@
       "hyper-sys",
       "--features",
       "hyper-os/std"
+    ],
+    [
+      "cargo",
+      "test",
+      "--manifest-path",
+      "stdlib/rust/Cargo.toml",
+      "-p",
+      "hyper-filesystem"
     ]
-  ],
-  "cargo_context": {
-    "hyper-os/Cargo.toml": {
-      "workspace": null,
-      "membership": "..",
-      "dependency_paths": {
-        "/dependencies/hyper-abi": "sdk/abi",
-        "/dependencies/hyper-sys": "stdlib/rust/hyper-sys"
-      },
-      "inherited_dependencies": {
-        "/dependencies/hyper-abi": {
-          "workspace": true
-        }
-      }
-    },
-    "hyper-rt/Cargo.toml": {
-      "workspace": null,
-      "membership": "..",
-      "dependency_paths": {
-        "/dependencies/hyper-abi": "sdk/abi",
-        "/dependencies/hyper-os": "stdlib/rust/hyper-os",
-        "/dependencies/hyper-sys": "stdlib/rust/hyper-sys"
-      },
-      "inherited_dependencies": {
-        "/dependencies/hyper-abi": {
-          "workspace": true
-        }
-      }
-    },
-    "hyper-sys/Cargo.toml": {
-      "workspace": null,
-      "membership": "..",
-      "dependency_paths": {
-        "/dependencies/hyper-abi": "sdk/abi"
-      },
-      "inherited_dependencies": {
-        "/dependencies/hyper-abi": {
-          "workspace": true
-        }
-      }
-    },
-    "Cargo.toml": {
-      "workspace": {
-        "resolver": "3",
-        "members": [
-          "hyper-filesystem",
-          "hyper-os",
-          "hyper-rt",
-          "hyper-sys"
-        ],
-        "package": {
-          "version": "0.0.0",
-          "edition": "2024",
-          "license": "Apache-2.0",
-          "repository": "https://github.com/roolrz/HypeR",
-          "publish": false
-        },
-        "dependencies": {
-          "hyper-abi": {
-            "path": "../../sdk/abi"
-          }
-        },
-        "lints": {
-          "clippy": {
-            "doc_markdown": "deny",
-            "empty_docs": "deny",
-            "expect_used": "deny",
-            "panic": "deny",
-            "todo": "deny",
-            "undocumented_unsafe_blocks": "deny",
-            "unimplemented": "deny",
-            "unreachable": "deny",
-            "unwrap_used": "deny",
-            "missing_safety_doc": "deny"
-          },
-          "rust": {
-            "unsafe_op_in_unsafe_fn": "deny",
-            "unexpected_cfgs": {
-              "level": "warn",
-              "check-cfg": [
-                "cfg(target_os, values(\"hyper\"))"
-              ]
-            }
-          }
-        }
-      },
-      "membership": null,
-      "dependency_paths": {},
-      "inherited_dependencies": {},
-      "extra_workspace_members": [
-        "hyper-filesystem"
-      ],
-      "workspace_dependency_paths": {
-        "hyper-abi": "sdk/abi"
-      }
-    }
-  }
+  ]
 }
