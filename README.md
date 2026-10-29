@@ -67,7 +67,7 @@ detach and allocation failure also trim. Live allocations remain valid.
 Use fallible collection APIs such as `try_reserve` where OOM is recoverable;
 infallible allocation failure follows Rust's allocation-error path and the
 runtime's aborting panic policy. Memory use remains charged to the process's
-resource domain. See [the C heap contract](../hyper/README.md#process-heap).
+resource domain. See [the C heap contract](https://github.com/HypeR-Proj/lib/blob/main/README.md#process-heap).
 
 `task::ProcessBuilder` stages arguments and environment entries in SDK-owned
 memory, then uploads their encoding before `seal()` or `into_handle()`.
@@ -106,7 +106,7 @@ dependencies.
 ## License
 
 Licensed under the Apache License, Version 2.0. See
-[the project license](../../LICENSE).
+[the project license](https://github.com/HypeR-Proj/HypeR/blob/main/LICENSE).
 
 ## Standard Rust applications
 
@@ -115,7 +115,7 @@ ordinary `main()`, standard streams, startup arguments, and clap support.
 `hyper-cargo` selects this mode by default. Existing `hyper_rt::entry!`
 applications select `HYPER_RUST_STD=0`; std applications using this crate
 enable its `std` feature and use ordinary `main()`. See the
-[Native std guide](../../sdk/toolchain/rust-std/README.md) for the support matrix,
+[Native std guide](https://github.com/HypeR-Proj/rust-std/blob/main/pal/README.md) for the support matrix,
 build contract, and Native thread and atomic-wait backend.
 
 Native std programs can call `hyper_rt::process::startup()` once to claim their
@@ -211,7 +211,7 @@ physical byte offsets within the mount's authorized block volume, including
 partial-sector tails. It contains no pointers or writable destination grants.
 The kernel validates and executes the plan into its own request/cache pages.
 Providers that transform bytes can return `Unsupported` to use buffered reads.
-See [block I/O](../../docs/design/storage/block-io.md) for copy boundaries,
+See [block I/O](https://github.com/HypeR-Proj/HypeR/blob/main/docs/design/storage/block-io.md) for copy boundaries,
 ordering, failure and quota semantics.
 
 ## Explicit memory residency
@@ -235,3 +235,14 @@ This provides no stable physical address and is separate from device DMA pins.
 A service must prepare its dependency closure before announcing readiness if
 refaulting could require its own suspended predecessor. That policy belongs to
 the service and its configuration, not to the loader or kernel.
+
+## Workspace tests
+
+Use the [HypeR workspace](https://github.com/HypeR-Proj/HypeR) to resolve dependencies:
+
+```sh
+./HypeR/hyper test rust-lib
+```
+
+Build paths in detailed documentation refer to the generated `out/system` directory.
+Edit this repository and prepare the workspace again before building.

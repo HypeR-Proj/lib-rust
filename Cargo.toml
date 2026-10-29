@@ -3,7 +3,11 @@
 
 [workspace]
 resolver = "3"
-members = ["hyper-filesystem", "hyper-os", "hyper-rt", "hyper-sys"]
+members = [
+    "hyper-os",
+    "hyper-rt",
+    "hyper-sys",
+]
 
 [workspace.package]
 version = "0.0.0"
@@ -13,7 +17,7 @@ repository = "https://github.com/roolrz/HypeR"
 publish = false
 
 [workspace.dependencies]
-hyper-abi = { path = "../../sdk/abi" }
+hyper-abi = "=0.0.0"
 
 [workspace.lints.clippy]
 doc_markdown = "deny"
@@ -29,5 +33,9 @@ missing_safety_doc = "deny"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
-# The SDK's JSON target defines this OS even when tooling runs on a host target.
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("hyper"))'] }
+
+[workspace.lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = [
+    "cfg(target_os, values(\"hyper\"))",
+]
