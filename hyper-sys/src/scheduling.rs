@@ -6,24 +6,24 @@
 use crate::{abi, ffi::ffi_native_invoke6};
 
 /// Reads the current thread's scheduling configuration.
+/// On success, `value0` reports the supported record size; only that prefix is written.
 /// # Safety
 /// Output must be a writable complete record for the duration of the call.
 pub unsafe fn thread_get_current_scheduling(
     output: *mut abi::HyperNativeSchedulingParameters,
-) -> abi::HyperNativeStatus {
+) -> crate::CallResult {
     // SAFETY: the caller supplies the valid output record.
     unsafe {
         ffi_native_invoke6(
             crate::ffi::ffi_native_execution_context(),
             abi::HYPER_NATIVE_OP_THREAD_GET_CURRENT_SCHEDULING,
             output as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeSchedulingParameters>() as u64,
             0,
             0,
             0,
             0,
         )
-        .status
     }
 }
 /// Changes only the calling thread, subject to its execution-context grant.
@@ -38,7 +38,7 @@ pub unsafe fn thread_set_current_scheduling(
             crate::ffi::ffi_native_execution_context(),
             abi::HYPER_NATIVE_OP_THREAD_SET_CURRENT_SCHEDULING,
             input as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeSchedulingParameters>() as u64,
             0,
             0,
             0,
@@ -50,14 +50,26 @@ pub unsafe fn thread_set_current_scheduling(
 macro_rules! scheduling_operations {
     ($get:ident, $set:ident, $get_op:ident, $set_op:ident) => {
         /// Reads scheduling configuration through INSPECT authority.
+        /// On success, `value0` reports the supported record size.
         /// # Safety
         /// The handle must remain live and output must identify a writable record.
         pub unsafe fn $get(
             handle: abi::HyperNativeHandle,
             output: *mut abi::HyperNativeSchedulingParameters,
-        ) -> abi::HyperNativeStatus {
+        ) -> crate::CallResult {
             // SAFETY: the caller supplies the live handle and writable record.
-            unsafe { ffi_native_invoke6(handle, abi::$get_op, output as u64, 0, 0, 0, 0, 0).status }
+            unsafe {
+                ffi_native_invoke6(
+                    handle,
+                    abi::$get_op,
+                    output as u64,
+                    core::mem::size_of::<abi::HyperNativeSchedulingParameters>() as u64,
+                    0,
+                    0,
+                    0,
+                    0,
+                )
+            }
         }
         /// Atomically changes configuration under the target's scheduling rights.
         /// # Safety
@@ -67,7 +79,19 @@ macro_rules! scheduling_operations {
             input: *const abi::HyperNativeSchedulingParameters,
         ) -> abi::HyperNativeStatus {
             // SAFETY: the caller supplies the live handle and readable record.
-            unsafe { ffi_native_invoke6(handle, abi::$set_op, input as u64, 0, 0, 0, 0, 0).status }
+            unsafe {
+                ffi_native_invoke6(
+                    handle,
+                    abi::$set_op,
+                    input as u64,
+                    core::mem::size_of::<abi::HyperNativeSchedulingParameters>() as u64,
+                    0,
+                    0,
+                    0,
+                    0,
+                )
+                .status
+            }
         }
     };
 }
@@ -98,8 +122,8 @@ pub unsafe fn process_builder_set_scheduling(
             builder,
             abi::HYPER_NATIVE_OP_PROCESS_BUILDER_SET_SCHEDULING,
             input as u64,
+            core::mem::size_of::<abi::HyperNativeSchedulingParameters>() as u64,
             delegated_rights,
-            0,
             0,
             0,
             0,

@@ -226,7 +226,7 @@ impl Directory {
         let options = match mode {
             OpenMode::Existing => 0,
             OpenMode::Create => 1,
-            OpenMode::CreateNew => 2,
+            OpenMode::CreateNew => 3,
         } | if truncate { 4 } else { 0 };
         // SAFETY: the source capability and path storage remain live.
         let result = unsafe {

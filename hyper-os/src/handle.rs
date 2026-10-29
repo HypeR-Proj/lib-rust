@@ -51,6 +51,8 @@ impl Koid {
 }
 
 /// Monotonically attenuated rights carried by one Native handle.
+/// Queries preserve unknown bits reported by newer kernels. [`Self::bits`]
+/// exposes the complete set; [`Self::names`] describes only known bits.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Rights(u64);
@@ -118,6 +120,12 @@ impl Rights {
         }
     }
 
+    /// Kernel observations may include rights introduced after this SDK.
+    /// Preserve them for inspection without accepting unknown request bits.
+    pub(crate) const fn from_kernel_bits(bits: u64) -> Self {
+        Self(bits)
+    }
+
     #[must_use]
     pub const fn bits(self) -> u64 {
         self.0
@@ -146,7 +154,7 @@ impl Rights {
         RIGHT_NAMES.iter().map(|(_, name)| *name)
     }
 
-    /// Iterates stable lower-case names for every right in this set.
+    /// Iterates stable lower-case names for the known rights in this set.
     #[must_use]
     pub const fn names(self) -> RightNames {
         RightNames {
@@ -598,7 +606,7 @@ pub enum ReplaceFailure<T: ObjectType> {
 
 fn query_info(raw: NonZeroU64) -> Result<HandleInfo> {
     let record = raw_ops::handle_info(raw)?;
-    let rights = Rights::from_bits(record.rights).ok_or(Error::InvalidResponse)?;
+    let rights = Rights::from_kernel_bits(record.rights);
     Ok(HandleInfo {
         kind: ObjectKind::from_kernel(record.object_kind)?,
         rights,

@@ -635,7 +635,7 @@ impl ObjectInspector {
                 process_koid: Koid::from_raw(record.process_koid)?,
                 handle: record.handle,
                 object_koid: Koid::from_raw(record.object_koid)?,
-                rights: Rights::from_bits(record.rights).ok_or(Error::InvalidResponse)?,
+                rights: Rights::from_kernel_bits(record.rights),
                 object_kind: ObjectKind::from_kernel(record.object_kind)?,
                 flags: record.flags,
             })?;
@@ -697,8 +697,7 @@ fn decode_object_observation(
         koid: Koid::from_raw(record.koid)?,
         object_kind: ObjectKind::from_kernel(record.object_kind)?,
         handles,
-        supported_rights: Rights::from_bits(record.supported_rights)
-            .ok_or(Error::InvalidResponse)?,
+        supported_rights: Rights::from_kernel_bits(record.supported_rights),
         references: ObjectReferenceCounts {
             strong: record.strong_references,
             kernel_service: record.kernel_service_references,
@@ -1073,6 +1072,31 @@ mod tests {
                 Err(crate::Error::InvalidResponse)
             );
         }
+    }
+
+    #[test]
+    fn object_observation_preserves_future_kinds_and_rights() -> crate::Result<()> {
+        let rights = hyper_abi::HYPER_NATIVE_RIGHT_INSPECT | (1_u64 << 63);
+        let record = hyper_abi::HyperNativeObjectInspection {
+            koid: 7,
+            object_kind: u32::MAX,
+            handle_state: hyper_abi::HYPER_NATIVE_OBJECT_HANDLE_STATE_ACTIVE as u32,
+            active_handles: 1,
+            supported_rights: rights,
+            ..super::ZERO_OBJECT
+        };
+        let observation = decode_object_observation(&record)?;
+        assert_eq!(observation.object_kind.as_raw(), u32::MAX);
+        assert_eq!(observation.object_kind.name(), "unknown");
+        assert_eq!(observation.supported_rights.bits(), rights);
+        assert!(
+            observation
+                .supported_rights
+                .contains(super::Rights::INSPECT)
+        );
+        // Explicit request construction still rejects bits this SDK cannot name.
+        assert_eq!(super::Rights::from_bits(rights), None);
+        Ok(())
     }
 
     #[test]

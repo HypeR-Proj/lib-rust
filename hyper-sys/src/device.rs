@@ -167,9 +167,9 @@ pub unsafe fn device_firmware_read(
             authority,
             abi::HYPER_NATIVE_OP_DEVICE_FIRMWARE_READ,
             query as u64,
+            core::mem::size_of::<abi::HyperNativeDeviceFirmwareQuery>() as u64,
             output as u64,
             capacity as u64,
-            0,
             0,
             0,
         )

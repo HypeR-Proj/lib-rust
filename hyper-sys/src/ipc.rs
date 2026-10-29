@@ -160,17 +160,27 @@ pub unsafe fn byte_channel_trace_rpc(
     endpoint: abi::HyperNativeHandle,
     arguments: [u64; 6],
 ) -> CallResult {
-    // SAFETY: the caller retains endpoint authority; all payloads are scalars.
+    let request = abi::HyperNativeRpcTraceRequest {
+        phase: arguments[0],
+        request: arguments[1],
+        detail: arguments[2],
+        generation: arguments[3],
+        parent_connection: arguments[4],
+        parent_request: arguments[5],
+        flags: 0,
+        reserved: 0,
+    };
+    // SAFETY: the caller retains endpoint authority and this initialized request lives until return.
     unsafe {
         ffi_native_invoke6(
             endpoint,
             abi::HYPER_NATIVE_OP_BYTE_CHANNEL_TRACE_RPC,
-            arguments[0],
-            arguments[1],
-            arguments[2],
-            arguments[3],
-            arguments[4],
-            arguments[5],
+            &request as *const _ as u64,
+            core::mem::size_of_val(&request) as u64,
+            0,
+            0,
+            0,
+            0,
         )
     }
 }

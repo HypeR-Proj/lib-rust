@@ -273,9 +273,9 @@ pub unsafe fn vmo_create_contiguous(size: u64) -> CallResult {
     unsafe {
         ffi_native_invoke6(
             crate::ffi::ffi_native_object_factory(),
-            abi::HYPER_NATIVE_OP_VMO_CREATE_CONTIGUOUS,
+            abi::HYPER_NATIVE_OP_VMO_CREATE,
             size,
-            0,
+            abi::HYPER_NATIVE_VMO_CREATE_CONTIGUOUS,
             0,
             0,
             0,

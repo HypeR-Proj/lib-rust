@@ -114,7 +114,7 @@ pub unsafe fn directory_read(
             records.addr() as u64,
             capacity as u64,
             0,
-            0,
+            core::mem::size_of::<abi::HyperNativeDirectoryEntry>() as u64,
             0,
         )
     }
@@ -163,12 +163,12 @@ pub unsafe fn directory_create_file(
     unsafe {
         ffi_native_invoke6(
             directory,
-            abi::HYPER_NATIVE_OP_DIRECTORY_CREATE_FILE,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE,
             path.addr() as u64,
             path_size as u64,
             rights,
+            abi::HYPER_NATIVE_FILE_OPEN_CREATE | abi::HYPER_NATIVE_FILE_OPEN_EXCLUSIVE,
             mode as u64,
-            0,
             0,
         )
     }
@@ -524,11 +524,11 @@ pub unsafe fn directory_open_directory_nofollow(
     unsafe {
         ffi_native_invoke6(
             directory,
-            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_DIRECTORY_NOFOLLOW,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_DIRECTORY,
             path as u64,
             path_length as u64,
             rights,
-            0,
+            abi::HYPER_NATIVE_DIRECTORY_OPEN_NOFOLLOW,
             0,
             0,
         )
@@ -553,7 +553,7 @@ pub unsafe fn directory_open_file_with_options(
     unsafe {
         ffi_native_invoke6(
             directory,
-            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE_WITH_OPTIONS,
+            abi::HYPER_NATIVE_OP_DIRECTORY_OPEN_FILE,
             path as u64,
             path_length as u64,
             rights,

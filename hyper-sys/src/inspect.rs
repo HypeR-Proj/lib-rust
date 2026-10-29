@@ -27,7 +27,7 @@ pub unsafe fn task_inspector_scan_processes(
             cursor,
             records.addr() as u64,
             capacity as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeTaskProcess>() as u64,
             0,
             0,
         )
@@ -54,7 +54,7 @@ pub unsafe fn task_inspector_scan_threads(
             cursor,
             records.addr() as u64,
             capacity as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeTaskThread>() as u64,
             0,
             0,
         )
@@ -81,7 +81,7 @@ pub unsafe fn object_inspector_scan_objects(
             cursor,
             records.addr() as u64,
             capacity as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeObjectInspection>() as u64,
             0,
             0,
         )
@@ -110,7 +110,7 @@ pub unsafe fn object_inspector_scan_handles(
             cursor,
             records.addr() as u64,
             capacity as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeHandleInspection>() as u64,
             0,
         )
     }
@@ -367,7 +367,7 @@ pub unsafe fn cpu_inspector_trace_start(
             inspector,
             abi::HYPER_NATIVE_OP_CPU_INSPECTOR_TRACE_START,
             config as u64,
-            0,
+            core::mem::size_of::<abi::HyperNativeTraceConfig>() as u64,
             0,
             0,
             0,

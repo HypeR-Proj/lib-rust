@@ -172,8 +172,11 @@ const ZERO: hyper_abi::HyperNativeSchedulingParameters =
 pub fn current() -> Result<Parameters> {
     let mut raw = ZERO;
     // SAFETY: the output record remains writable for the call.
-    Status::from_raw(unsafe { hyper_sys::thread_get_current_scheduling(&mut raw) })
-        .into_result()?;
+    let result = unsafe { hyper_sys::thread_get_current_scheduling(&mut raw) };
+    crate::validate_info_result(
+        result,
+        hyper_abi::HYPER_NATIVE_SCHEDULING_PARAMETERS_MIN_SIZE,
+    )?;
     Parameters::decode(raw)
 }
 /// Atomically changes the calling thread within its immutable creation limits.
@@ -188,8 +191,11 @@ pub fn set_current(parameters: Parameters) -> Result<()> {
 pub fn thread(thread: HandleRef<'_, ThreadObject>) -> Result<Parameters> {
     let mut raw = ZERO;
     // SAFETY: the live handle and output are borrowed until return.
-    Status::from_raw(unsafe { hyper_sys::thread_get_scheduling(thread.raw().get(), &mut raw) })
-        .into_result()?;
+    let result = unsafe { hyper_sys::thread_get_scheduling(thread.raw().get(), &mut raw) };
+    crate::validate_info_result(
+        result,
+        hyper_abi::HYPER_NATIVE_SCHEDULING_PARAMETERS_MIN_SIZE,
+    )?;
     Parameters::decode(raw)
 }
 /// Applies a complete configuration using only this handle's scheduling rights.
@@ -204,8 +210,11 @@ pub fn set_thread(thread: HandleRef<'_, ThreadObject>, parameters: Parameters) -
 pub fn vcpu(vcpu: HandleRef<'_, VirtualCpuObject>) -> Result<Parameters> {
     let mut raw = ZERO;
     // SAFETY: the live handle and output are borrowed until return.
-    Status::from_raw(unsafe { hyper_sys::virtual_cpu_get_scheduling(vcpu.raw().get(), &mut raw) })
-        .into_result()?;
+    let result = unsafe { hyper_sys::virtual_cpu_get_scheduling(vcpu.raw().get(), &mut raw) };
+    crate::validate_info_result(
+        result,
+        hyper_abi::HYPER_NATIVE_SCHEDULING_PARAMETERS_MIN_SIZE,
+    )?;
     Parameters::decode(raw)
 }
 /// Configures a vCPU's host thread using scheduling rights derived from its VM

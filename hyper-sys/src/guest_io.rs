@@ -185,6 +185,12 @@ pub unsafe fn filesystem_mount(
     length: usize,
     read_only: bool,
 ) -> CallResult {
+    let request = abi::HyperNativeFilesystemMountRequest {
+        path: path as u64,
+        path_size: length as u64,
+        flags: u64::from(read_only),
+        reserved: 0,
+    };
     // SAFETY: Caller retains all capabilities and path bytes for the call.
     unsafe {
         ffi_native_invoke6(
@@ -192,10 +198,10 @@ pub unsafe fn filesystem_mount(
             abi::HYPER_NATIVE_OP_FILESYSTEM_MOUNT,
             channel,
             buffer,
-            path as u64,
-            length as u64,
-            u64::from(read_only),
             queue,
+            &request as *const _ as u64,
+            core::mem::size_of_val(&request) as u64,
+            0,
         )
     }
 }
