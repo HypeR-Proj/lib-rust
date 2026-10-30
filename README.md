@@ -115,7 +115,7 @@ ordinary `main()`, standard streams, startup arguments, and clap support.
 `hyper-cargo` selects this mode by default. Existing `hyper_rt::entry!`
 applications select `HYPER_RUST_STD=0`; std applications using this crate
 enable its `std` feature and use ordinary `main()`. See the
-[Native std guide](https://github.com/HypeR-Proj/lib-std/blob/main/pal/README.md) for the support matrix,
+[Native std guide](https://github.com/HypeR-Proj/lib-rust-std/blob/main/pal/README.md) for the support matrix,
 build contract, and Native thread and atomic-wait backend.
 
 Native std programs can call `hyper_rt::process::startup()` once to claim their
