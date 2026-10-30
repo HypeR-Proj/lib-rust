@@ -40,11 +40,11 @@ to their respective bootstrap or formal-system libraries; the SDK imposes no
 generic userspace IPC wire envelope.
 
 The initial runtime reuses the SDK startup parser and architecture syscall
-veneer from `stdlib/hyper`. The startup vector comes from the selected userspace loader;
+veneer from `stdlib/system`. The startup vector comes from the selected userspace loader;
 the kernel only supplies a bootstrap channel, mapping capabilities and opaque
 data. The dynamic loader or static CRT initializes a private heap VMAR before
 application entry, and
-`hyper-rt` installs the `libhyper` process heap as Rust's global allocator.
+`hyper-rt` installs the `libsystem` process heap as Rust's global allocator.
 Applications can use `alloc` without implementing an allocator:
 
 ```rust
@@ -67,7 +67,7 @@ detach and allocation failure also trim. Live allocations remain valid.
 Use fallible collection APIs such as `try_reserve` where OOM is recoverable;
 infallible allocation failure follows Rust's allocation-error path and the
 runtime's aborting panic policy. Memory use remains charged to the process's
-resource domain. See [the C heap contract](https://github.com/HypeR-Proj/libc/blob/main/README.md#process-heap).
+resource domain. See [the C heap contract](https://github.com/HypeR-Proj/lib-system/blob/main/README.md#process-heap).
 
 `task::ProcessBuilder` stages arguments and environment entries in SDK-owned
 memory, then uploads their encoding before `seal()` or `into_handle()`.

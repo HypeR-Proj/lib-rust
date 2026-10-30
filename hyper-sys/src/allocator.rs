@@ -13,13 +13,13 @@ unsafe extern "C" {
     fn hyper_realloc(pointer: *mut c_void, size: usize, alignment: usize) -> *mut c_void;
 }
 
-/// The shared process allocator supplied by `libhyper`.
+/// The shared process allocator supplied by `libsystem`.
 ///
 /// CRT initializes it before application entry. Allocation failure returns
 /// null; the caller or Rust's allocation-error handler determines OOM policy.
 pub struct NativeAllocator;
 
-// SAFETY: libhyper serializes allocation metadata, honors power-of-two
+// SAFETY: libsystem serializes allocation metadata, honors power-of-two
 // alignment, preserves realloc contents on failure, and never unwinds.
 unsafe impl GlobalAlloc for NativeAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -34,7 +34,7 @@ unsafe impl GlobalAlloc for NativeAllocator {
 
     unsafe fn realloc(&self, pointer: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
         // SAFETY: the caller owns pointer with this layout and supplies a valid
-        // nonzero replacement size; libhyper retains pointer on failure.
+        // nonzero replacement size; libsystem retains pointer on failure.
         unsafe { hyper_realloc(pointer.cast(), new_size, layout.align()).cast() }
     }
 }
@@ -44,6 +44,6 @@ unsafe impl GlobalAlloc for NativeAllocator {
 /// Live allocations are unaffected. Concurrent threads may immediately reuse
 /// capacity, so the returned byte count is not an idle-memory guarantee.
 pub fn trim() -> usize {
-    // SAFETY: libhyper serializes arenas and releases only wholly free regions.
+    // SAFETY: libsystem serializes arenas and releases only wholly free regions.
     unsafe { hyper_heap_trim() }
 }
