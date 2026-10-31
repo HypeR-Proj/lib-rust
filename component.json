@@ -30,5 +30,25 @@
       "-p",
       "hyper-filesystem"
     ]
-  ]
+  ],
+  "build": {
+    "actions": {
+      "all": [
+        [
+          "make",
+          "-C",
+          "{workspace}",
+          "sdk"
+        ]
+      ],
+      "build": [
+        [
+          "make",
+          "-C",
+          "{workspace}",
+          "sdk"
+        ]
+      ]
+    }
+  }
 }
