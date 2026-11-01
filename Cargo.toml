@@ -16,7 +16,6 @@ publish = false
 [workspace.dependencies]
 
 [workspace.dependencies.hyper-abi]
-version = "=0.0.0"
 path = "../../sdk/abi"
 
 [workspace.lints]
