@@ -389,12 +389,17 @@ pub struct File {
 }
 
 impl File {
-    /// Writes a bounded range; the returned count may be short.
+    /// Writes a bounded range and returns its accepted prefix, which may be short.
+    /// Retry only the unaccepted suffix. Success does not promise durability;
+    /// storage errors may surface on a later operation or filesystem sync.
+    /// An error does not guarantee rollback of data or zero-filled file gaps.
     pub fn write_at(&self, offset: u64, input: &[u8]) -> Result<usize> {
         self.write(Some(offset), input).map(|(count, _)| count)
     }
 
-    /// Appends one bounded write atomically and reports its end offset.
+    /// Atomically selects the append position and reports accepted bytes and
+    /// their end offset. A short append follows the same contract as `write_at`;
+    /// replaying its accepted prefix would duplicate those bytes.
     pub fn append(&self, input: &[u8]) -> Result<(usize, u64)> {
         self.write(None, input)
     }
