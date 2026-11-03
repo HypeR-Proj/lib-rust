@@ -39,6 +39,16 @@ application code. System-service protocols and helper implementations belong
 to their respective bootstrap or formal-system libraries; the SDK imposes no
 generic userspace IPC wire envelope.
 
+Capability receive reports `Error::ReceiveRejected` only for a matched transfer
+which installed no destination capabilities and retained all sender MOVE owners.
+`ReceiveRejection::Capacity` contains the required byte/handle counts;
+`ReceiveRejection::Status` preserves the underlying cause. Ordinary `Error::Status`
+and local validation errors describe the receiver invocation, endpoint or wait.
+A rejected match is not automatically retryable: output-memory faults, exhausted
+resources and internal errors require their own policy. After any error, ignore
+all output memory; even partially written handle values are not live owners.
+ByteChannel size errors remain `Error::MessageTooLarge`.
+
 The initial runtime reuses the SDK startup parser and architecture syscall
 veneer from `stdlib/system`. The startup vector comes from the selected userspace loader;
 the kernel only supplies a bootstrap channel, mapping capabilities and opaque

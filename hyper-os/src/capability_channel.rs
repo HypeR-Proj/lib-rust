@@ -278,7 +278,10 @@ impl CapabilityChannel {
     ///
     /// Only an `OK` result initializes the returned byte slice or installs
     /// owners into `slots`. After any error, callers must continue treating
-    /// the entire byte buffer as uninitialized.
+    /// the entire byte buffer as uninitialized. `Error::ReceiveRejected` denotes
+    /// an already matched transaction that installed no capabilities; ordinary
+    /// status/local errors describe this receiver invocation or endpoint.
+    /// A rejection's cause determines recovery; it is not inherently retryable.
     pub fn receive<'buffer>(
         &self,
         deadline: u64,
@@ -319,14 +322,7 @@ impl CapabilityChannel {
         );
         let status = Status::from_raw(result.status);
         if status != Status::OK {
-            return if status == Status::BUFFER_TOO_SMALL {
-                Err(Error::MessageTooLarge {
-                    bytes: result.value0,
-                    handles: result.value1,
-                })
-            } else {
-                Err(Error::Status(status))
-            };
+            return Err(receive_error(status, result.value0, result.value1));
         }
         // Take ownership of every distinct nonzero successful output before
         // any fallible count conversion or validation can return.
@@ -354,6 +350,30 @@ impl CapabilityChannel {
     #[must_use]
     pub fn into_handle(self) -> OwnedHandle<CapabilityChannelObject> {
         self.handle
+    }
+}
+
+fn receive_error(status: Status, value0: u64, value1: u64) -> Error {
+    if status == Status::BUFFER_TOO_SMALL {
+        Error::ReceiveRejected(crate::ReceiveRejection::Capacity {
+            bytes: value0,
+            handles: value1,
+        })
+    } else if status == Status::TRANSACTION_REJECTED {
+        let reason = Status::from_raw(value0 as i64);
+        // The second register is reserved, and OK/another wrapper cannot be a
+        // failed match's underlying cause. Capacity has its own wire result.
+        if value1 != 0
+            || reason.as_raw() >= 0
+            || reason == Status::TRANSACTION_REJECTED
+            || reason == Status::BUFFER_TOO_SMALL
+        {
+            Error::InvalidResponse
+        } else {
+            Error::ReceiveRejected(crate::ReceiveRejection::Status(reason))
+        }
+    } else {
+        Error::Status(status)
     }
 }
 
@@ -502,6 +522,32 @@ mod raw_ops {
         bytes: &mut [MaybeUninit<u8>],
         slots: &mut [hyper_abi::HyperNativeCapabilityReceiveSlot],
     ) -> hyper_sys::CallResult {
+        if (6..=10).contains(&deadline) {
+            let (status, value0, value1) = match deadline {
+                6 => (crate::Status::BAD_HANDLE, 0, 0),
+                7 => (
+                    crate::Status::TRANSACTION_REJECTED,
+                    crate::Status::BAD_HANDLE.as_raw() as u64,
+                    0,
+                ),
+                8 => (crate::Status::BUFFER_TOO_SMALL, 16, 2),
+                9 => (crate::Status::TRANSACTION_REJECTED, 0, 0),
+                _ => (
+                    crate::Status::TRANSACTION_REJECTED,
+                    crate::Status::FAULT.as_raw() as u64,
+                    0,
+                ),
+            };
+            // Even plausible output handles from a failed call are never owners.
+            if let Some(slot) = slots.first_mut() {
+                slot.handle = crate::handle::TEST_SENTINEL_HANDLE;
+            }
+            return hyper_sys::CallResult {
+                status: status.as_raw(),
+                value0,
+                value1,
+            };
+        }
         if deadline == 2 {
             if let Some(byte) = bytes.first_mut() {
                 byte.write(0xff);
@@ -576,6 +622,70 @@ mod tests {
             .ok_or(Error::InvalidResponse)?;
         // SAFETY: the test backend assigns this value to one unique owner.
         Ok(unsafe { OwnedHandle::from_raw_owned(raw) })
+    }
+
+    #[test]
+    fn receive_distinguishes_match_rejection_without_adopting_outputs() -> crate::Result<()> {
+        let (_sender, receiver) = CapabilityChannel::create()?;
+        let mut bytes = [MaybeUninit::uninit(); 8];
+        let mut slots = [CapabilityReceiveSlot::new::<EventObject>(Rights::INSPECT)];
+        for (deadline, expected) in [
+            (6, Error::Status(Status::BAD_HANDLE)),
+            (
+                7,
+                Error::ReceiveRejected(crate::ReceiveRejection::Status(Status::BAD_HANDLE)),
+            ),
+            (
+                8,
+                Error::ReceiveRejected(crate::ReceiveRejection::Capacity {
+                    bytes: 16,
+                    handles: 2,
+                }),
+            ),
+            (9, Error::InvalidResponse),
+            (
+                10,
+                Error::ReceiveRejected(crate::ReceiveRejection::Status(Status::FAULT)),
+            ),
+        ] {
+            assert_eq!(
+                receiver.receive(deadline, &mut bytes, &mut slots).err(),
+                Some(expected)
+            );
+            assert!(!slots[0].is_occupied());
+        }
+        let mut excessive = alloc::vec::Vec::new();
+        for _ in 0..=super::MAX_CAPABILITIES {
+            excessive.push(CapabilityReceiveSlot::new::<EventObject>(Rights::INSPECT));
+        }
+        assert!(matches!(
+            receiver.receive(7, &mut bytes, &mut excessive),
+            Err(Error::MessageTooLarge { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn malformed_rejection_metadata_is_not_a_retryable_peer_error() {
+        for reason in [
+            Status::OK,
+            Status::TRANSACTION_REJECTED,
+            Status::BUFFER_TOO_SMALL,
+            Status::from_raw(1),
+        ] {
+            assert_eq!(
+                super::receive_error(Status::TRANSACTION_REJECTED, reason.as_raw() as u64, 0),
+                Error::InvalidResponse
+            );
+        }
+        assert_eq!(
+            super::receive_error(
+                Status::TRANSACTION_REJECTED,
+                Status::BAD_HANDLE.as_raw() as u64,
+                1
+            ),
+            Error::InvalidResponse
+        );
     }
 
     #[test]
