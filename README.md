@@ -271,3 +271,10 @@ admitted peer's connection payload or handle count violates the stream protocol.
 The receive's `Error::ReceiveRejected` still identifies a rolled-back matched
 transfer. Other errors, including `InvalidResponse` from trusted ABI validation,
 retain their original meaning and must not be blindly retried as peer input.
+
+## Byte-channel deadlines
+
+`ByteChannel::send_until` and `receive_until` take an absolute monotonic deadline.
+Retries and readiness waits share that deadline. An already expired call does
+not send or consume a queued message. Existing `send` and `receive` retain their
+unbounded-wait behavior; callers requiring a budget use the explicit methods.

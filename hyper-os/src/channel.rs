@@ -66,6 +66,12 @@ impl<'owner> ByteChannel<'owner> {
 
     /// Sends one complete message, waiting while peer capacity is exhausted.
     pub fn send(&self, bytes: &[u8]) -> Result<()> {
+        self.send_until(bytes, crate::DEADLINE_INFINITE)
+    }
+
+    /// Sends one message within an absolute monotonic deadline. Capacity waits
+    /// and retries consume the same budget; expiry does not send the message.
+    pub fn send_until(&self, bytes: &[u8], until: u64) -> Result<()> {
         if bytes.len() > MAX_MESSAGE_BYTES {
             return Err(Error::MessageTooLarge {
                 bytes: bytes.len() as u64,
@@ -73,10 +79,11 @@ impl<'owner> ByteChannel<'owner> {
             });
         }
         loop {
+            check_deadline(until)?;
             match self.try_send(bytes) {
                 Ok(()) => return Ok(()),
                 Err(Error::Status(Status::WOULD_BLOCK)) => {
-                    if self.wait_writable()? == WaitOutcome::PeerClosed {
+                    if self.wait_writable(until)? == WaitOutcome::PeerClosed {
                         return Err(Error::Status(Status::PEER_CLOSED));
                     }
                 }
@@ -103,11 +110,18 @@ impl<'owner> ByteChannel<'owner> {
 
     /// Receives one complete handle-free message, waiting until one arrives.
     pub fn receive(&self, bytes: &mut [u8]) -> Result<usize> {
+        self.receive_until(bytes, crate::DEADLINE_INFINITE)
+    }
+
+    /// Receives within an absolute monotonic deadline. Expiry leaves any queued
+    /// message untouched, including when it was already readable on entry.
+    pub fn receive_until(&self, bytes: &mut [u8], until: u64) -> Result<usize> {
         loop {
+            check_deadline(until)?;
             match self.try_receive(bytes) {
                 Ok(actual) => return Ok(actual),
                 Err(Error::Status(Status::WOULD_BLOCK)) => {
-                    if self.wait_readable()? == WaitOutcome::PeerClosed {
+                    if self.wait_readable(until)? == WaitOutcome::PeerClosed {
                         return Err(Error::Status(Status::PEER_CLOSED));
                     }
                 }
@@ -140,28 +154,30 @@ impl<'owner> ByteChannel<'owner> {
         }
     }
 
-    fn wait_readable(&self) -> Result<WaitOutcome> {
-        self.wait_for(hyper_abi::HYPER_NATIVE_SIGNAL_BYTE_CHANNEL_READABLE)
+    fn wait_readable(&self, until: u64) -> Result<WaitOutcome> {
+        self.wait_for(hyper_abi::HYPER_NATIVE_SIGNAL_BYTE_CHANNEL_READABLE, until)
     }
 
-    fn wait_writable(&self) -> Result<WaitOutcome> {
-        self.wait_for(hyper_abi::HYPER_NATIVE_SIGNAL_BYTE_CHANNEL_WRITABLE)
+    fn wait_writable(&self, until: u64) -> Result<WaitOutcome> {
+        self.wait_for(hyper_abi::HYPER_NATIVE_SIGNAL_BYTE_CHANNEL_WRITABLE, until)
     }
 
-    fn wait_for(&self, desired: u64) -> Result<WaitOutcome> {
+    fn wait_for(&self, desired: u64, until: u64) -> Result<WaitOutcome> {
         let awaited = desired | hyper_abi::HYPER_NATIVE_SIGNAL_BYTE_CHANNEL_PEER_CLOSED;
         // SAFETY: the startup borrow retains this waitable endpoint throughout
         // the call.
-        let result = unsafe {
-            hyper_sys::object_wait_one(
-                self.handle.raw().get(),
-                awaited,
-                hyper_abi::HYPER_NATIVE_DEADLINE_INFINITE,
-            )
-        };
+        let result = unsafe { hyper_sys::object_wait_one(self.handle.raw().get(), awaited, until) };
         Status::from_raw(result.status).into_result()?;
         classify_wait(result.value0, desired)
     }
+}
+
+fn check_deadline(until: u64) -> Result<()> {
+    if until != crate::DEADLINE_INFINITE && crate::time::monotonic_now()?.as_nanoseconds() >= until
+    {
+        return Err(Error::Status(Status::TIMED_OUT));
+    }
+    Ok(())
 }
 
 impl OwnedHandle<ByteChannelObject> {
