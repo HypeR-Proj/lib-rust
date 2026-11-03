@@ -25,6 +25,8 @@ pub enum Error {
     UnsupportedAbi { revision: u64, features: u64 },
     /// A trusted runtime or kernel response violated the Native ABI contract.
     InvalidResponse,
+    /// An admitted peer sent an invalid Native stream connection request.
+    InvalidStreamRequest,
     /// One channel message exceeded the receiving binding's bounded storage.
     MessageTooLarge { bytes: u64, handles: u64 },
     /// A MOVE source option did not contain an owned handle.
