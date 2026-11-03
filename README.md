@@ -206,6 +206,13 @@ than copying payload through the provider. All accepted writes must complete
 before the provider replies. Invented, expired or out-of-range tokens/ranges
 are rejected. Closing a queue does not revoke already mapped readonly storage.
 
+File writes report an accepted input prefix, not a durability guarantee. Short
+writes and appends advance by the returned count; retry only the remaining
+suffix. A later storage failure remains observable through subsequent operations
+or filesystem sync, even when the write returned a nonzero count. A failed
+transfer can have indeterminate effects, and gap zero filling can survive an
+error; neither case implies rollback or permits blindly replaying an append.
+
 `hyper-filesystem::protocol::ReadExtentPlan` describes a bounded prefix using
 physical byte offsets within the mount's authorized block volume, including
 partial-sector tails. It contains no pointers or writable destination grants.
