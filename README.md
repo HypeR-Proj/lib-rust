@@ -263,3 +263,11 @@ python3 project.py test lib-rust
 
 Paths in the documentation are relative to the repo-managed workspace root.
 Edit this repository and prepare the workspace again before building.
+
+## Stream admission failures
+
+`hyper_os::stream::accept_until` reports `Error::InvalidStreamRequest` when an
+admitted peer's connection payload or handle count violates the stream protocol.
+The receive's `Error::ReceiveRejected` still identifies a rolled-back matched
+transfer. Other errors, including `InvalidResponse` from trusted ABI validation,
+retain their original meaning and must not be blindly retried as peer input.

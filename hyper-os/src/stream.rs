@@ -133,13 +133,13 @@ pub fn accept_until(listener: &CapabilityChannel, deadline: u64) -> Result<Accep
         || message.bytes()[..8] != OPEN_MAGIC
         || message.capability_count() != 1
     {
-        return Err(Error::InvalidResponse);
+        return Err(Error::InvalidStreamRequest);
     }
     let mut access = [0; 8];
     access.copy_from_slice(&message.bytes()[8..]);
     let access = u64::from_le_bytes(access);
     if access == 0 || access & !(ACCESS_READ | ACCESS_WRITE) != 0 {
-        return Err(Error::InvalidResponse);
+        return Err(Error::InvalidStreamRequest);
     }
     Ok(Accepted {
         channel: slots[0].take()?.ok_or(Error::MissingHandle)?,
