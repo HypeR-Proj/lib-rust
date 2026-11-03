@@ -42,7 +42,7 @@ pub mod vm;
 pub mod wait;
 
 pub use abi::require_core_abi;
-pub use error::{Error, Result};
+pub use error::{Error, ReceiveRejection, Result};
 pub use handle::{HandleRef, OwnedHandle, Rights, RightsOffer};
 pub use status::Status;
 

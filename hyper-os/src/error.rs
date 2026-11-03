@@ -3,11 +3,24 @@
 
 use crate::Status;
 
+/// A matched capability transaction which committed no authority.
+///
+/// This is an origin, not a retry policy or attribution of fault to the sender.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReceiveRejection {
+    /// The matched send needed more advertised receive storage.
+    Capacity { bytes: u64, handles: u64 },
+    /// The original failure, including possible receiver output-memory faults.
+    Status(Status),
+}
+
 /// Failure reported by the safe Native OS binding.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
     /// The kernel rejected an otherwise well-formed Native operation.
     Status(Status),
+    /// A matched transfer was rejected; MOVE sources remain owned by the sender.
+    ReceiveRejected(ReceiveRejection),
     /// The installed kernel does not implement the SDK's required ABI.
     UnsupportedAbi { revision: u64, features: u64 },
     /// A trusted runtime or kernel response violated the Native ABI contract.
