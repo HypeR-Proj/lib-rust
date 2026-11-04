@@ -392,3 +392,31 @@ fn write_accepts_buffered_or_window_modes_but_other_operations_reject_tokens()
     assert!(write.encode(&mut bytes).is_none());
     Ok(())
 }
+
+#[test]
+fn writeback_negotiation_accepts_only_bounded_intervals() {
+    let mut wire = [0; RESPONSE_BYTES];
+    for interval in [0, 1_000_000_000, 30_000_000_000, 3_600_000_000_000] {
+        let response = Response {
+            sequence: 17,
+            operation: Operation::TakeWriteback,
+            result: Ok(interval),
+            entry: Entry::empty(),
+        };
+        assert!(response.encode(&mut wire).is_some());
+        assert_eq!(
+            ResponseRef::decode(&wire, 17, Operation::TakeWriteback).map(|r| r.result()),
+            Some(Ok(interval))
+        );
+    }
+    for interval in [1, 999_999_999, 3_600_000_000_001, u64::MAX] {
+        let response = Response {
+            sequence: 17,
+            operation: Operation::TakeWriteback,
+            result: Ok(interval),
+            entry: Entry::empty(),
+        };
+        assert!(response.encode(&mut wire).is_none());
+    }
+    assert_eq!(Operation::decode(13), Some(Operation::TakeWriteback));
+}

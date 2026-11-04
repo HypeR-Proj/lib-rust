@@ -41,6 +41,9 @@ pub enum Operation {
     SetMetadata,
     ReadLink,
     ReadExtents,
+    /// Transfer periodic synchronization ownership to the VFS. Returns the
+    /// interval in nanoseconds, or zero for synchronous/volatile/read-only media.
+    TakeWriteback,
 }
 impl Operation {
     pub fn decode(value: u64) -> Option<Self> {
@@ -57,6 +60,7 @@ impl Operation {
             10 => Self::SetMetadata,
             11 => Self::ReadLink,
             12 => Self::ReadExtents,
+            13 => Self::TakeWriteback,
             _ => return None,
         })
     }
@@ -339,6 +343,9 @@ fn valid_result(operation: Operation, result: Result<u64, Error>) -> bool {
     match operation {
         Operation::Read | Operation::Write => value <= DATA_BYTES as u64,
         Operation::ReadLink => value <= PATH_BYTES as u64,
+        Operation::TakeWriteback => {
+            value == 0 || (1_000_000_000..=3_600_000_000_000).contains(&value)
+        }
         Operation::ReadExtents => (16..=EXTENT_PLAN_BYTES as u64).contains(&value),
         Operation::ReadDirectory => {
             value >= directory::BATCH_HEADER_BYTES as u64 && value <= DIRECTORY_BATCH_BYTES as u64
