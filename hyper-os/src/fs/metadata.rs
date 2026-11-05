@@ -23,6 +23,8 @@ pub enum OpenMode {
 pub enum SyncScope {
     Data,
     Full,
+    /// Synchronize all accepted changes on the filesystem containing this file.
+    Volume,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LockMode {
@@ -390,7 +392,11 @@ impl File {
         status(unsafe {
             hyper_sys::file_sync(
                 self.as_handle_ref().raw().get(),
-                u32::from(scope == SyncScope::Full),
+                match scope {
+                    SyncScope::Data => hyper_abi::HYPER_NATIVE_FILE_SYNC_DATA as u32,
+                    SyncScope::Full => hyper_abi::HYPER_NATIVE_FILE_SYNC_ALL as u32,
+                    SyncScope::Volume => hyper_abi::HYPER_NATIVE_FILE_SYNC_VOLUME as u32,
+                },
             )
         })
     }
