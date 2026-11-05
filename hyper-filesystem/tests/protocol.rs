@@ -3,6 +3,64 @@
 
 use hyper_filesystem::protocol::*;
 
+#[test]
+fn capability_features_do_not_overlap_maximum_names() -> Result<(), &'static str> {
+    let mut entry = Entry::empty();
+    entry.name.fill(b'a');
+    entry.name_len = NAME_BYTES;
+    let response = Response {
+        sequence: 1,
+        operation: Operation::Stat,
+        result: Ok(0),
+        entry,
+    };
+    let mut bytes = [0xff; RESPONSE_BYTES];
+    response.encode(&mut bytes).ok_or("legacy encoding")?;
+    let decoded = ResponseRef::decode(&bytes, 1, Operation::Stat).ok_or("legacy reply")?;
+    assert_eq!(decoded.features(), ResponseFeatures::NONE);
+    let features = ResponseFeatures::from_bits(ResponseFeatures::CAPABILITY_QUERY.bits() | 1 << 63);
+    response
+        .encode_with_features(&mut bytes, features)
+        .ok_or("feature encoding")?;
+    let decoded = ResponseRef::decode(&bytes, 1, Operation::Stat).ok_or("feature reply")?;
+    assert_eq!(decoded.features(), features);
+    assert!(decoded.features().supports_capability_query());
+    let mut restored = Entry::empty();
+    decoded.entry_into(&mut restored);
+    assert_eq!(restored.name_len, NAME_BYTES);
+    assert_eq!(restored.name, response.entry.name);
+    // Reusing a frame through the plain encoder must clear old advertisements.
+    response.encode(&mut bytes).ok_or("legacy reuse")?;
+    assert_eq!(
+        ResponseRef::decode(&bytes, 1, Operation::Stat)
+            .ok_or("legacy reused reply")?
+            .features(),
+        ResponseFeatures::NONE
+    );
+    Ok(())
+}
+
+#[test]
+fn capability_query_preserves_unknown_backend_bits() -> Result<(), &'static str> {
+    assert_eq!(Operation::decode(15), Some(Operation::Capabilities));
+    let capabilities = Capabilities::from_bits(Capabilities::READ_EXTENTS.bits() | 1 << 63);
+    let mut bytes = [0; RESPONSE_BYTES];
+    Response {
+        sequence: 1,
+        operation: Operation::Capabilities,
+        result: Ok(capabilities.bits()),
+        entry: Entry::empty(),
+    }
+    .encode_with_features(&mut bytes, ResponseFeatures::CAPABILITY_QUERY)
+    .ok_or("capability reply")?;
+    let decoded =
+        ResponseRef::decode(&bytes, 1, Operation::Capabilities).ok_or("decoded capabilities")?;
+    assert_eq!(decoded.result(), Ok(capabilities.bits()));
+    assert!(capabilities.supports_read_extents());
+    assert!(!Capabilities::from_bits(1 << 63).supports_read_extents());
+    Ok(())
+}
+
 fn request() -> Request<'static> {
     Request {
         window_token: 0,

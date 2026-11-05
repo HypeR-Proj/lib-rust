@@ -7,8 +7,10 @@
 
 use crate::Timestamp;
 
+mod capabilities;
 mod directory;
 mod extents;
+pub use capabilities::{Capabilities, ResponseFeatures};
 pub use directory::{
     DIRECTORY_BATCH_BYTES, DIRECTORY_MIN_BYTES, DirectoryBatch, DirectoryBatchBuilder,
     DirectoryCursor, DirectoryRecord,
@@ -22,6 +24,10 @@ pub const NAME_BYTES: usize = 1020;
 pub const HEADER_BYTES: usize = 120;
 pub const REQUEST_BYTES: usize = HEADER_BYTES + PATH_BYTES * 2;
 pub const RESPONSE_BYTES: usize = 1152;
+// The maximum name ends at byte 1132. Older encoders zeroed this fixed trailer
+// and older decoders ignored it, allowing safe opt-in to new request numbers.
+const RESPONSE_FEATURES_OFFSET: usize = RESPONSE_BYTES - 8;
+const _: () = assert!(112 + NAME_BYTES <= RESPONSE_FEATURES_OFFSET);
 pub const FILE: u32 = 1;
 pub const DIRECTORY: u32 = 2;
 pub const SYMLINK: u32 = 3;
@@ -44,8 +50,11 @@ pub enum Operation {
     /// Transfer periodic synchronization ownership to the VFS. Returns the
     /// interval in nanoseconds, or zero for synchronous/volatile/read-only media.
     TakeWriteback,
-    /// Synchronize one path. `length` encodes SyncMode; other payload fields are empty.
+    /// Synchronize one path. `length` encodes `SyncMode`; other payload fields are empty.
     SyncFile,
+    /// Read-only provider capability query. Every payload field must be empty.
+    /// Send only after a reply advertises `ResponseFeatures::CAPABILITY_QUERY`.
+    Capabilities,
 }
 impl Operation {
     pub fn decode(value: u64) -> Option<Self> {
@@ -64,6 +73,7 @@ impl Operation {
             12 => Self::ReadExtents,
             13 => Self::TakeWriteback,
             14 => Self::SyncFile,
+            15 => Self::Capabilities,
             _ => return None,
         })
     }
@@ -244,6 +254,17 @@ pub struct Response {
     pub entry: Entry,
 }
 impl Response {
+    /// Advertise only features implemented by this dispatcher. Plain encode
+    /// deliberately retains the legacy zero-feature reply for older providers.
+    pub fn encode_with_features(
+        &self,
+        output: &mut [u8; RESPONSE_BYTES],
+        features: ResponseFeatures,
+    ) -> Option<()> {
+        self.encode(output)?;
+        put(output, RESPONSE_FEATURES_OFFSET, features.bits());
+        Some(())
+    }
     pub fn encode(&self, output: &mut [u8; RESPONSE_BYTES]) -> Option<()> {
         let name = self.entry.name.get(..self.entry.name_len)?;
         if self.sequence == 0
@@ -289,6 +310,7 @@ impl Response {
 /// storage without retaining an intermediate owned `Response` on their stack.
 pub struct ResponseRef<'a> {
     result: Result<u64, Error>,
+    features: ResponseFeatures,
     name: &'a [u8],
     kind: u32,
     mode: u32,
@@ -328,6 +350,7 @@ impl<'a> ResponseRef<'a> {
         }
         Some(Self {
             result,
+            features: ResponseFeatures::from_bits(get(input, RESPONSE_FEATURES_OFFSET)?),
             name,
             kind,
             mode,
@@ -340,6 +363,10 @@ impl<'a> ResponseRef<'a> {
 
     pub const fn result(&self) -> Result<u64, Error> {
         self.result
+    }
+
+    pub const fn features(&self) -> ResponseFeatures {
+        self.features
     }
 
     /// Replace caller-owned metadata only after full response validation.
@@ -360,6 +387,7 @@ fn valid_result(operation: Operation, result: Result<u64, Error>) -> bool {
         return true;
     };
     match operation {
+        Operation::Capabilities => true,
         Operation::Read | Operation::Write => value <= DATA_BYTES as u64,
         Operation::ReadLink => value <= PATH_BYTES as u64,
         Operation::TakeWriteback => {
