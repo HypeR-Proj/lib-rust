@@ -44,6 +44,8 @@ pub enum Operation {
     /// Transfer periodic synchronization ownership to the VFS. Returns the
     /// interval in nanoseconds, or zero for synchronous/volatile/read-only media.
     TakeWriteback,
+    /// Synchronize one path. `length` encodes SyncMode; other payload fields are empty.
+    SyncFile,
 }
 impl Operation {
     pub fn decode(value: u64) -> Option<Self> {
@@ -61,8 +63,25 @@ impl Operation {
             11 => Self::ReadLink,
             12 => Self::ReadExtents,
             13 => Self::TakeWriteback,
+            14 => Self::SyncFile,
             _ => return None,
         })
+    }
+}
+/// Both modes include metadata required to recover the file's contents.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u64)]
+pub enum SyncMode {
+    Data = 0,
+    All = 1,
+}
+impl SyncMode {
+    pub fn decode(value: u64) -> Option<Self> {
+        match value {
+            0 => Some(Self::Data),
+            1 => Some(Self::All),
+            _ => None,
+        }
     }
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
