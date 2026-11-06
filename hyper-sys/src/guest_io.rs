@@ -429,3 +429,22 @@ pub unsafe fn guest_interrupt_set_level(interrupt: u64, asserted: bool) -> CallR
         )
     }
 }
+
+/// Discards a failed mount by exact identity using namespace-root authority.
+/// # Safety
+/// The directory capability remains valid throughout the call.
+pub unsafe fn filesystem_detach_failed(directory: u64, mount_id: u64) -> CallResult {
+    // SAFETY: The caller retains the borrowed directory capability.
+    unsafe {
+        ffi_native_invoke6(
+            directory,
+            abi::HYPER_NATIVE_OP_FILESYSTEM_DETACH_FAILED,
+            mount_id,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}

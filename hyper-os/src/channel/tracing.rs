@@ -17,7 +17,7 @@ pub struct RpcContext {
 
 /// Best-effort tracing for a `READ|WRITE` endpoint. Construct once per connection:
 /// kernels without tracing are probed once and make no per-request trace calls.
-/// Instrumented kernels perform one annotation invocation at each boundary.
+/// A matching vDSO suppresses BEGIN invocations while IPC capture is inactive.
 pub struct RpcTracer<'owner> {
     endpoint: HandleRef<'owner, ByteChannelObject>,
     supported: bool,
@@ -86,6 +86,9 @@ impl<'owner> RpcTracer<'owner> {
         detail: u64,
         parent: Option<RpcContext>,
     ) -> Option<RpcContext> {
+        if !self.supported || !raw_ops::active() {
+            return None;
+        }
         let parent = parent.map_or([0; 3], |p| [p.generation, p.connection, p.request]);
         let [generation, connection] =
             self.call([phase, request, detail, parent[0], parent[1], parent[2]])?;
@@ -108,10 +111,84 @@ impl<'owner> RpcTracer<'owner> {
         if !self.supported {
             return None;
         }
+        let result = raw_ops::annotate(self.endpoint, arguments);
+        (result.status == abi::HYPER_NATIVE_STATUS_OK).then_some([result.value0, result.value1])
+    }
+}
+
+#[cfg(not(test))]
+mod raw_ops {
+    use super::*;
+
+    pub(super) fn active() -> bool {
+        hyper_sys::trace_ipc_active()
+    }
+
+    pub(super) fn annotate(
+        endpoint: HandleRef<'_, ByteChannelObject>,
+        arguments: [u64; 6],
+    ) -> hyper_sys::CallResult {
         // SAFETY: the borrow retains the endpoint. Scalars grant no authority;
         // the kernel validates READ|WRITE and optional instrumentation support.
-        let result =
-            unsafe { hyper_sys::byte_channel_trace_rpc(self.endpoint.raw().get(), arguments) };
-        (result.status == abi::HYPER_NATIVE_STATUS_OK).then_some([result.value0, result.value1])
+        unsafe { hyper_sys::byte_channel_trace_rpc(endpoint.raw().get(), arguments) }
+    }
+}
+
+#[cfg(test)]
+mod raw_ops {
+    use super::*;
+    use core::cell::Cell;
+    std::thread_local! {
+        pub(super) static ACTIVE: Cell<bool> = const { Cell::new(false) };
+        pub(super) static CALLS: Cell<usize> = const { Cell::new(0) };
+    }
+    pub(super) fn active() -> bool {
+        ACTIVE.get()
+    }
+    pub(super) fn annotate(
+        _: HandleRef<'_, ByteChannelObject>,
+        _: [u64; 6],
+    ) -> hyper_sys::CallResult {
+        CALLS.set(CALLS.get() + 1);
+        hyper_sys::CallResult {
+            status: 0,
+            value0: u64::from(active()),
+            value1: 99,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::num::NonZeroU64;
+
+    #[test]
+    fn initialized_idle_connections_make_no_annotation_invocations_and_resume() {
+        raw_ops::ACTIVE.set(false);
+        raw_ops::CALLS.set(0);
+        // SAFETY: the test transport observes numeric identity only and never
+        // enters the kernel or closes the synthetic borrowed handle.
+        let endpoint = unsafe { HandleRef::from_raw_borrowed(NonZeroU64::MIN) };
+        let tracer = RpcTracer::new(endpoint);
+        assert_eq!(raw_ops::CALLS.get(), 1);
+        for request in 1..=1024 {
+            let client = tracer.client_begin(request, 7, None);
+            let server = tracer.server_begin(request, 7, None);
+            assert!(client.is_none() && server.is_none());
+            tracer.client_end(client, 0);
+            tracer.server_end(server, 0);
+        }
+        assert_eq!(raw_ops::CALLS.get(), 1);
+        raw_ops::ACTIVE.set(true);
+        let context = tracer.client_begin(1025, 7, None);
+        assert!(context.is_some());
+        assert_eq!(raw_ops::CALLS.get(), 2);
+        raw_ops::ACTIVE.set(false);
+        // END still reaches authoritative kernel generation/admission checks.
+        tracer.client_end(context, 0);
+        assert_eq!(raw_ops::CALLS.get(), 3);
+        assert!(tracer.client_begin(1026, 7, None).is_none());
+        assert_eq!(raw_ops::CALLS.get(), 3);
     }
 }

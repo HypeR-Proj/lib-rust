@@ -33,6 +33,7 @@ mod wait;
 pub use block_queue::{
     block_queue_create, block_queue_create_window, block_queue_info, block_queue_reap,
     block_queue_submit, block_queue_submit_window, block_queue_wait, block_queue_wait_space,
+    native_block_retire_queue,
 };
 pub use console::{
     console_discard_input, console_read, console_write, virtual_serial_acknowledge_output,
@@ -55,11 +56,11 @@ pub use fs::{
     filesystem_mount_ramfs, filesystem_switch_root,
 };
 pub use guest_io::{
-    filesystem_mount, filesystem_unmount, guest_interrupt_create, guest_interrupt_set_level,
-    guest_mailbox_create, guest_mailbox_receive, guest_mailbox_send, guest_mapping_create,
-    guest_mapping_release, guest_memory_scalar, guest_memory_transfer, guest_notification_access,
-    guest_notification_configure, guest_notification_control, guest_notification_create,
-    native_block_activate, native_block_create, native_block_transfer,
+    filesystem_detach_failed, filesystem_mount, filesystem_unmount, guest_interrupt_create,
+    guest_interrupt_set_level, guest_mailbox_create, guest_mailbox_receive, guest_mailbox_send,
+    guest_mapping_create, guest_mapping_release, guest_memory_scalar, guest_memory_transfer,
+    guest_notification_access, guest_notification_configure, guest_notification_control,
+    guest_notification_create, native_block_activate, native_block_create, native_block_transfer,
 };
 pub use handle::{
     handle_close, handle_duplicate, handle_get_info, handle_replace, object_get_basic_info,
@@ -90,7 +91,9 @@ pub use retirement::{
     process_retirement_release,
 };
 pub use startup::{AuxiliaryEntry, RawStartup, startup_find_handle};
-pub use system::{abi_query, clock_get_monotonic, clock_get_realtime, system_config};
+pub use system::{
+    abi_query, clock_get_monotonic, clock_get_realtime, system_config, trace_ipc_active,
+};
 pub use task::{
     process_builder_abort, process_builder_add_handle, process_builder_create,
     process_builder_seal, process_builder_set_affinity, process_builder_set_data,

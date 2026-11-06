@@ -59,16 +59,13 @@ pub unsafe fn clock_get_monotonic() -> CallResult {
 /// pointers must exclusively reference writable records or byte ranges.
 pub unsafe fn clock_get_realtime() -> CallResult {
     // SAFETY: the caller establishes handle lifetime and buffer validity.
-    unsafe {
-        ffi_native_invoke6(
-            crate::ffi::ffi_native_system_info(),
-            abi::HYPER_NATIVE_OP_CLOCK_GET_REALTIME,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-        )
-    }
+    unsafe { crate::ffi::ffi_clock_get_realtime() }
+}
+
+/// Advisory IPC capture state. Missing vDSO conservatively returns true.
+/// This hint grants no trace authority and never replaces kernel admission.
+pub fn trace_ipc_active() -> bool {
+    // SAFETY: the runtime query has no arguments, allocation, or syscalls and
+    // tolerates invocation before optional vDSO initialization.
+    unsafe { crate::ffi::ffi_trace_ipc_active() != 0 }
 }

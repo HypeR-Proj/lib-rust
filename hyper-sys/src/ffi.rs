@@ -30,6 +30,10 @@ unsafe extern "C" {
 
     #[link_name = "hyper_clock_get_monotonic"]
     pub(super) fn ffi_clock_get_monotonic() -> CallResult;
+    #[link_name = "hyper_clock_get_realtime"]
+    pub(super) fn ffi_clock_get_realtime() -> CallResult;
+    #[link_name = "hyper_trace_ipc_active"]
+    pub(super) fn ffi_trace_ipc_active() -> core::ffi::c_int;
 
     #[link_name = "hyper_startup_find_handle"]
     pub(super) fn ffi_startup_find_handle(

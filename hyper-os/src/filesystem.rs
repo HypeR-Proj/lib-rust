@@ -26,7 +26,7 @@ pub fn mount(
     directory: HandleRef<'_, DirectoryObject>,
     path: &str,
     read_only: bool,
-) -> Result<()> {
+) -> Result<u64> {
     // SAFETY: All borrowed capabilities and path bytes outlive this call.
     let result = unsafe {
         hyper_sys::filesystem_mount(
@@ -40,13 +40,13 @@ pub fn mount(
         )
     };
     Status::from_raw(result.status).into_result()?;
-    if result.value0 != 0 || result.value1 != 0 {
+    if result.value0 == 0 || result.value1 != 0 {
         return Err(Error::InvalidResponse);
     }
-    Ok(())
+    Ok(result.value0)
 }
 /// Refuse active file/directory users, synchronize, then retire one mount.
-/// No lazy or forced detach is supported; failure preserves the namespace edge.
+/// Failure preserves the namespace edge. Failed-provider recovery is separate.
 pub fn unmount(directory: HandleRef<'_, DirectoryObject>, path: &str) -> Result<()> {
     // SAFETY: Capability and path are borrowed through the synchronous syscall.
     let result =
@@ -197,4 +197,18 @@ impl ReadonlyBuffer {
         // the producer/consumer phase and excludes concurrent kernel mutation.
         unsafe { core::slice::from_raw_parts(self.inner.address as *const u8, self.inner.size) }
     }
+}
+
+/// Explicitly discards a permanently failed remote mount using namespace-root
+/// `MANAGE_NAMESPACE` authority. Existing references remain failed. Returns only
+/// known dirty VFS bytes discarded; filesystem metadata loss remains unknown.
+/// This does not stop workers or establish block-device quiescence.
+pub fn detach_failed(directory: HandleRef<'_, DirectoryObject>, mount_id: u64) -> Result<u64> {
+    // SAFETY: The directory remains borrowed throughout the call.
+    let result = unsafe { hyper_sys::filesystem_detach_failed(directory.raw().get(), mount_id) };
+    Status::from_raw(result.status).into_result()?;
+    if result.value1 != 0 {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(result.value0)
 }

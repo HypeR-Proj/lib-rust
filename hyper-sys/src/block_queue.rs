@@ -195,3 +195,22 @@ pub unsafe fn block_queue_submit_window(
         )
     }
 }
+
+/// Closes one derived queue and waits for physical retirement.
+/// # Safety
+/// Both capabilities remain valid throughout the potentially blocking call.
+pub unsafe fn native_block_retire_queue(block: u64, queue: u64, deadline: u64) -> CallResult {
+    // SAFETY: The caller retains both borrowed capabilities.
+    unsafe {
+        ffi_native_invoke6(
+            block,
+            abi::HYPER_NATIVE_OP_NATIVE_BLOCK_RETIRE_QUEUE,
+            queue,
+            deadline,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}

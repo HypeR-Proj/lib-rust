@@ -10,8 +10,8 @@ mod queue;
 pub use queue::{BlockQueue, Completion, QueueConfig, QueueInfo, ReadRequest, Ticket, WindowWrite};
 
 use crate::handle::{
-    AnyObject, GuestMemoryObject, HandleRef, NativeBlockObject, OwnedHandle, Rights,
-    VirtualMachineObject,
+    AnyObject, BlockQueueObject, GuestMemoryObject, HandleRef, NativeBlockObject, OwnedHandle,
+    Rights, VirtualMachineObject,
 };
 use crate::{Error, Result, Status};
 
@@ -121,6 +121,27 @@ impl NativeBlock {
     /// closing this parent does not close an independently held derived queue.
     pub fn create_queue(&self, config: QueueConfig) -> Result<BlockQueue> {
         BlockQueue::create(self.as_handle_ref(), config)
+    }
+    /// Permanently closes a queue from this device and waits for physical I/O
+    /// retirement. Timeout leaves it closed; failure never certifies safe reuse.
+    pub fn retire_queue(
+        &self,
+        queue: HandleRef<'_, BlockQueueObject>,
+        deadline: u64,
+    ) -> Result<()> {
+        // SAFETY: Both capabilities remain borrowed throughout the call.
+        let result = unsafe {
+            hyper_sys::native_block_retire_queue(
+                self.as_handle_ref().raw().get(),
+                queue.raw().get(),
+                deadline,
+            )
+        };
+        Status::from_raw(result.status).into_result()?;
+        if result.value0 != 0 || result.value1 != 0 {
+            return Err(Error::InvalidResponse);
+        }
+        Ok(())
     }
     pub fn read_sectors(&self, first: u64, bytes: &mut [u8]) -> Result<()> {
         self.transfer(0, first, bytes.as_mut_ptr(), bytes.len())
