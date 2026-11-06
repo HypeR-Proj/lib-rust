@@ -200,7 +200,7 @@ impl ReadonlyBuffer {
 }
 
 /// Explicitly discards a permanently failed remote mount using namespace-root
-/// MANAGE_NAMESPACE authority. Existing references remain failed. Returns only
+/// `MANAGE_NAMESPACE` authority. Existing references remain failed. Returns only
 /// known dirty VFS bytes discarded; filesystem metadata loss remains unknown.
 /// This does not stop workers or establish block-device quiescence.
 pub fn detach_failed(directory: HandleRef<'_, DirectoryObject>, mount_id: u64) -> Result<u64> {
