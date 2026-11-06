@@ -10,6 +10,7 @@ use crate::Timestamp;
 mod capabilities;
 mod directory;
 mod extents;
+mod writeback;
 pub use capabilities::{Capabilities, ResponseFeatures};
 pub use directory::{
     DIRECTORY_BATCH_BYTES, DIRECTORY_MIN_BYTES, DirectoryBatch, DirectoryBatchBuilder,
@@ -17,6 +18,9 @@ pub use directory::{
 };
 pub use extents::{
     EXTENT_PLAN_BYTES, MAX_READ_EXTENTS, ReadExtent, ReadExtentPlan, ReadExtentPlanBuilder,
+};
+pub use writeback::{
+    MAX_WRITEBACK_INTERVAL_NS, MIN_WRITEBACK_INTERVAL_NS, valid_writeback_interval_ns,
 };
 pub const DATA_BYTES: usize = 512 * 1024;
 pub const PATH_BYTES: usize = 4096;
@@ -390,9 +394,7 @@ fn valid_result(operation: Operation, result: Result<u64, Error>) -> bool {
         Operation::Capabilities => true,
         Operation::Read | Operation::Write => value <= DATA_BYTES as u64,
         Operation::ReadLink => value <= PATH_BYTES as u64,
-        Operation::TakeWriteback => {
-            value == 0 || (1_000_000_000..=3_600_000_000_000).contains(&value)
-        }
+        Operation::TakeWriteback => value == 0 || valid_writeback_interval_ns(value),
         Operation::ReadExtents => (16..=EXTENT_PLAN_BYTES as u64).contains(&value),
         Operation::ReadDirectory => {
             value >= directory::BATCH_HEADER_BYTES as u64 && value <= DIRECTORY_BATCH_BYTES as u64
