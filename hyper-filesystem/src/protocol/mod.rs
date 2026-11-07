@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! One ordered request at a time over a `ByteChannel`; file bytes use a dedicated
-//! resident VMO. A timed-out or malformed transaction retires the mount forever.
+//! resident VMO. Optional writeback submissions may remain incomplete after ACK;
+//! their exact completion is collected through an ordered `ReapWriteback` request.
+//! A timed-out or malformed transaction retires the mount forever.
 //! Every path is relative, UTF-8, without empty, dot or parent components.
 
 use crate::Timestamp;
@@ -20,7 +22,8 @@ pub use extents::{
     EXTENT_PLAN_BYTES, MAX_READ_EXTENTS, ReadExtent, ReadExtentPlan, ReadExtentPlanBuilder,
 };
 pub use writeback::{
-    MAX_WRITEBACK_INTERVAL_NS, MIN_WRITEBACK_INTERVAL_NS, valid_writeback_interval_ns,
+    MAX_WRITEBACK_BATCHES, MAX_WRITEBACK_INTERVAL_NS, MIN_WRITEBACK_INTERVAL_NS,
+    WRITEBACK_COMPLETION_BYTES, WritebackCompletion, valid_writeback_interval_ns,
 };
 pub const DATA_BYTES: usize = 512 * 1024;
 pub const PATH_BYTES: usize = 4096;
@@ -59,6 +62,13 @@ pub enum Operation {
     /// Read-only provider capability query. Every payload field must be empty.
     /// Send only after a reply advertises `ResponseFeatures::CAPABILITY_QUERY`.
     Capabilities,
+    /// Consume a write input into bounded asynchronous writeback. Success returns
+    /// its accepted prefix; this request's sequence identifies the pending batch.
+    /// Requires `ASYNC_WRITEBACK` and prior `TakeWriteback` delegation.
+    SubmitWriteback,
+    /// Wait and retire the oldest pending batch named by offset. Other payload
+    /// fields are empty. Success publishes a `WritebackCompletion` in shared data.
+    ReapWriteback,
 }
 impl Operation {
     pub fn decode(value: u64) -> Option<Self> {
@@ -78,6 +88,8 @@ impl Operation {
             13 => Self::TakeWriteback,
             14 => Self::SyncFile,
             15 => Self::Capabilities,
+            16 => Self::SubmitWriteback,
+            17 => Self::ReapWriteback,
             _ => return None,
         })
     }
@@ -176,7 +188,8 @@ impl Entry {
 #[derive(Clone, Copy)]
 pub struct Request<'a> {
     /// Queue-scoped generation authorizing this operation's readonly write
-    /// window. Only Write may carry a nonzero token; it grants no read access.
+    /// window. Only Write/`SubmitWriteback` may carry a nonzero token; it grants
+    /// no read access.
     /// Zero selects the ordinary shared buffer on a blockless transport.
     pub window_token: u64,
     pub cursor: DirectoryCursor,
@@ -195,7 +208,10 @@ impl<'a> Request<'a> {
             || !valid_path(self.path)
             || !valid_path(self.target)
             || (self.operation != Operation::ReadDirectory && !self.cursor.is_start())
-            || self.operation != Operation::Write && self.window_token != 0
+            || !matches!(
+                self.operation,
+                Operation::Write | Operation::SubmitWriteback
+            ) && self.window_token != 0
         {
             return None;
         }
@@ -244,7 +260,10 @@ impl<'a> Request<'a> {
             || !valid_path(request.path)
             || !valid_path(request.target)
             || (request.operation != Operation::ReadDirectory && !request.cursor.is_start())
-            || request.operation != Operation::Write && request.window_token != 0
+            || !matches!(
+                request.operation,
+                Operation::Write | Operation::SubmitWriteback
+            ) && request.window_token != 0
         {
             return None;
         }
@@ -393,6 +412,8 @@ fn valid_result(operation: Operation, result: Result<u64, Error>) -> bool {
     match operation {
         Operation::Capabilities => true,
         Operation::Read | Operation::Write => value <= DATA_BYTES as u64,
+        Operation::SubmitWriteback => (1..=DATA_BYTES as u64).contains(&value),
+        Operation::ReapWriteback => value == WRITEBACK_COMPLETION_BYTES as u64,
         Operation::ReadLink => value <= PATH_BYTES as u64,
         Operation::TakeWriteback => value == 0 || valid_writeback_interval_ns(value),
         Operation::ReadExtents => (16..=EXTENT_PLAN_BYTES as u64).contains(&value),
