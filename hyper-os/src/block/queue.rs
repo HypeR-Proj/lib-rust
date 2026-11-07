@@ -23,8 +23,9 @@ pub struct QueueConfig {
     /// Retained payload bytes, including completed reads awaiting reap.
     pub byte_limit: u64,
     /// Maximum physical commands from this queue allowed in flight together.
-    /// The initial transport shares an 896 KiB payload pool among four command
-    /// heads; a larger merged command may consume several 128 KiB data spans.
+    /// The initial transport shares fifteen 128 KiB payload spans among four
+    /// command heads. Two maximum-size 512 KiB commands fit simultaneously;
+    /// head count alone does not guarantee space for four such commands.
     pub inflight_limit: u32,
 }
 
