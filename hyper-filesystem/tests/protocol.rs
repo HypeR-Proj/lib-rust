@@ -478,3 +478,79 @@ fn writeback_negotiation_accepts_only_bounded_intervals() {
     }
     assert_eq!(Operation::decode(13), Some(Operation::TakeWriteback));
 }
+
+#[test]
+fn async_writeback_completion_preserves_prefix_and_rejects_malformed_records()
+-> Result<(), &'static str> {
+    let mut wire = [0; WRITEBACK_COMPLETION_BYTES];
+    for result in [Ok(()), Err(Error::Io), Err(Error::NoSpace)] {
+        let completion = WritebackCompletion {
+            batch: 41,
+            accepted: 17,
+            result,
+        };
+        completion.encode(&mut wire).ok_or("encode")?;
+        assert_eq!(WritebackCompletion::decode(&wire), Some(completion));
+    }
+    assert!(WritebackCompletion::decode(&wire[..23]).is_none());
+    for (offset, invalid) in [(0, 0), (8, 0), (8, DATA_BYTES as u64 + 1), (16, u64::MAX)] {
+        let mut malformed = wire;
+        malformed[offset..offset + 8].copy_from_slice(&invalid.to_le_bytes());
+        assert!(WritebackCompletion::decode(&malformed).is_none());
+    }
+    Ok(())
+}
+
+#[test]
+fn async_writeback_has_separate_operations_and_optional_capability() -> Result<(), &'static str> {
+    assert!(Capabilities::ASYNC_WRITEBACK.supports_async_writeback());
+    assert!(!Capabilities::READ_EXTENTS.supports_async_writeback());
+    assert_eq!(Operation::decode(16), Some(Operation::SubmitWriteback));
+    assert_eq!(Operation::decode(17), Some(Operation::ReapWriteback));
+    let request = Request {
+        window_token: 19,
+        cursor: DirectoryCursor::START,
+        sequence: 41,
+        operation: Operation::SubmitWriteback,
+        offset: 0,
+        length: 4,
+        path: "file",
+        target: "",
+        accessed: None,
+        modified: None,
+    };
+    let mut bytes = [0; REQUEST_BYTES];
+    let length = request.encode(&mut bytes).ok_or("request")?;
+    assert_eq!(
+        Request::decode(&bytes[..length])
+            .ok_or("decode")?
+            .window_token,
+        19
+    );
+    let reap = Request {
+        operation: Operation::ReapWriteback,
+        ..request
+    };
+    assert!(reap.encode(&mut bytes).is_none());
+    let mut reply = [0; RESPONSE_BYTES];
+    for (operation, value, valid) in [
+        (Operation::SubmitWriteback, 0, false),
+        (Operation::SubmitWriteback, 4, true),
+        (Operation::SubmitWriteback, DATA_BYTES as u64 + 1, false),
+        (Operation::ReapWriteback, 0, false),
+        (
+            Operation::ReapWriteback,
+            WRITEBACK_COMPLETION_BYTES as u64,
+            true,
+        ),
+    ] {
+        let response = Response {
+            sequence: 41,
+            operation,
+            result: Ok(value),
+            entry: Entry::empty(),
+        };
+        assert_eq!(response.encode(&mut reply).is_some(), valid);
+    }
+    Ok(())
+}

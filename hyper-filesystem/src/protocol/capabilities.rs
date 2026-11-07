@@ -12,6 +12,9 @@ impl Capabilities {
     /// The provider can describe some file ranges as physical read extents.
     /// An individual range may still return Unsupported and require ordinary Read.
     pub const READ_EXTENTS: Self = Self(1);
+    /// Bounded accepted/completed writeback, independently negotiated from cadence.
+    /// Completion must progress without the request actor or a `ReapWriteback` call.
+    pub const ASYNC_WRITEBACK: Self = Self(2);
 
     pub const fn from_bits(bits: u64) -> Self {
         Self(bits)
@@ -19,6 +22,10 @@ impl Capabilities {
 
     pub const fn bits(self) -> u64 {
         self.0
+    }
+
+    pub const fn supports_async_writeback(self) -> bool {
+        self.0 & Self::ASYNC_WRITEBACK.0 != 0
     }
 
     pub const fn supports_read_extents(self) -> bool {
