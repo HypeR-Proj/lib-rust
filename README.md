@@ -19,7 +19,8 @@ them with the Rust toolchain selected for the application.
 | `hyper-rt` | Rust application entry, process-heap allocator, panic termination, and exit status |
 | `hyper-filesystem` | Bounded filesystem service wire protocol, metadata types |
 
-Unsafe machine interactions are confined to `hyper-sys`. Application code
+Raw syscall bindings are confined to `hyper-sys`; `hyper-os` owns the narrowly
+scoped unsafe mappings needed to provide typed memory access. Application code
 should normally depend only on `hyper-os` and `hyper-rt`. `hyper-os` is an
 application-independent semantic layer and keeps Rust standard-library
 platform adapters separate from its stable-facing capability interfaces.
@@ -286,3 +287,60 @@ retain their original meaning and must not be blindly retried as peer input.
 Retries and readiness waits share that deadline. An already expired call does
 not send or consume a queued message. Existing `send` and `receive` retain their
 unbounded-wait behavior; callers requiring a budget use the explicit methods.
+
+## Shared message queues
+
+`hyper_os::shared_queue` provides bounded SPSC messages over ordinary shared RAM.
+Each direction has one producer and one consumer; bidirectional protocols use
+one pair per direction. This is a userspace protocol over existing VMO, Event,
+ByteChannel and WaitSet capabilities, not a new kernel object or POSIX facility.
+
+Negotiate `VERSION` and `Config` in the surrounding connection protocol. Call
+`create_pair`, then transfer the five capabilities in each role's parts before
+mapping them. Geometry is fixed locally: 1–1024 slots, 1–65536 bytes per message,
+and at most 16 MiB of producer storage. Creation populates backing before
+publishing either endpoint. The producer can write only data storage; the
+consumer can write only control storage. Each peer maps the other's VMO read-only.
+The separate Event capabilities carry readiness, and a ByteChannel is retained
+solely for endpoint lifetime. Mappings use private child VMARs.
+
+`Producer::map` and `Consumer::map` are unsafe boundaries: the root must belong
+to the calling process, other VMAR authority must not invalidate their mappings,
+and every concurrent alias must use aligned atomic u64 accesses at identical
+offsets. Each role has one protocol owner. Corrupt indices and lengths cannot
+supply an address or overrun a private buffer; arbitrary mixed-width or
+non-atomic aliases are outside this Rust memory-model contract. No shared
+payload reference escapes the SDK.
+
+`try_send_batch` / `try_receive_batch` return a committed message count plus an
+optional stopping reason. Retry only the suffix. In particular, a notification
+failure can accompany a nonzero committed count and poisons the endpoint; it
+must not cause replay of the prefix. A too-small receive buffer reports the
+required size without consuming the head message. `ReceiveSlot::message`
+exposes only a successfully consumed private copy. Empty messages are supported.
+
+The nonblocking path queries no lifecycle syscall. On Full or Empty, call the
+corresponding `wait_*_until` with one absolute deadline; it handles readiness,
+spurious hints, timeout cleanup and peer death. Pure polling can continue to
+report Full/Empty after an abrupt peer exit. Publication does not acknowledge
+consumption or guarantee that a peer remains alive. `Producer::finish` publishes
+a graceful close marker: the consumer drains preceding messages, then receives
+Closed. Dropping or terminating a producer without that marker yields PeerDied
+when observed, with no guarantee about an unobserved final publication.
+
+The wire layout uses little-endian payload words. Producer words 0/1/2 are
+head/space-wait-armed/closed; consumer words 0/1 are tail/data-wait-armed. Both
+headers occupy eight words. Each data slot has one length word followed by
+`ceil(message_bytes / 8)` payload words. Cursors are monotonic u64 values and
+never wrap; exhaustion closes the endpoint. Before sleeping, an endpoint
+clears its Event, arms its flag, then rechecks the peer cursor. Cursor publication
+and armed checks use a single sequentially consistent order, so both sides
+cannot miss each other's publication. Events are scheduling hints, not memory
+barriers. Notifications coalesce across each batch and no syscall is issued
+when the peer has not armed a wait. This protocol grants no DMA authority and
+its endpoint closure is not a device-retirement acknowledgement.
+
+Host tests cover malformed metadata, committed failures, counter exhaustion
+and arm/recheck interleavings. The service lifecycle case transfers real roles
+between processes and covers backpressure, timer expiry/reuse and both forms
+of closure. These tests do not replace physical AArch64 weak-order validation.

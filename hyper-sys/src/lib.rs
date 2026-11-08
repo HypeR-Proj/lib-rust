@@ -14,6 +14,7 @@ pub mod allocator;
 mod block_queue;
 mod console;
 mod device;
+mod event;
 mod ffi;
 mod fs;
 mod guest_io;
@@ -44,6 +45,7 @@ pub use device::{
     device_firmware_read, device_irq_complete, device_irq_pending, device_mmio,
     device_profile_info, device_resource_info, physical_device_info,
 };
+pub use event::{event_create, event_signal};
 pub use fs::{
     directory_begin_read, directory_canonicalize, directory_create_directory,
     directory_create_file, directory_get_info, directory_get_metadata, directory_get_self_metadata,

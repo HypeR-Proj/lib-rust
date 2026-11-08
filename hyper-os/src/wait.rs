@@ -54,6 +54,11 @@ impl<T: ObjectType> ObjectSignals<T> {
     }
 }
 
+impl ObjectSignals<crate::handle::EventObject> {
+    pub const SIGNALED: Self =
+        Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_EVENT_SIGNALED);
+}
+
 impl ObjectSignals<crate::handle::BlockQueueObject> {
     /// At least one completed result is available and not claimed by a reaper.
     pub const COMPLETED: Self =
