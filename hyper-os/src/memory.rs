@@ -5,6 +5,9 @@
 
 use crate::handle::{AnyObject, HandleRef, OwnedHandle, Rights, VmoObject};
 
+mod atomic;
+mod atomic_wait;
+pub use atomic::SharedAtomicU32Mapping;
 mod private;
 mod residency;
 /// Releases empty process-heap regions without affecting live allocations.
