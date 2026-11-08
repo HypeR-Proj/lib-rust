@@ -175,6 +175,26 @@ snapshot. An already delivered notification can outlive registration removal;
 consumers replacing subscriptions must recognize stale IDs. The single-event
 `wait` remains available.
 
+Shared process synchronization uses `HandleRef<VmoObject>::wait_u32(offset,
+expected, absolute_deadline)` and `wake_u32(offset, count)`, also available on
+`WritableVmo`. Identity is the VMO object plus its aligned byte offset, independent
+of each process's mapping address. Wait requires READ|WRITE, wake only WRITE;
+neither requires MAP. A mismatch returns success without sleeping. After every
+successful wait, reload the condition; success does not transfer lock ownership.
+Count zero wakes nobody. Closing handles or unmapping does not cancel an admitted
+wait; thread cancellation and deadlines release it. Private address-based atomic
+waits remain separate.
+
+`memory::SharedAtomicU32Mapping` maps a private child VMAR and exposes checked
+`load`/`store`/`compare_exchange` by u32 index without ordinary references to shared memory. Its
+constructor and `wait_u32` are unsafe because every concurrent alias must use
+aligned, same-width `AtomicU32` accesses; use explicit release/acquire ordering
+for application data. Do not mix this layout with the shared queue's u64 words.
+Mapping requires READ|WRITE|MAP and current-process VMAR authority. An active
+shared wait retains writable admission and backing even after unmap, so ordinary
+VMO byte reads/writes, snapshots and new exclusive hardware ownership return BUSY.
+Wake does not access backing and can return zero during hardware ownership.
+
 With the optional `hyper-os/std` feature on HypeR targets,
 `hyper_os::fs::File::into_std()` transfers a Native File capability into
 `std::fs::File` without reopening or duplicating it. The standard file owns

@@ -236,6 +236,60 @@ pub unsafe fn vmo_create_snapshot(vmo: abi::HyperNativeHandle) -> CallResult {
     }
 }
 
+/// Compares one shared VMO-relative u32 and sleeps until a wake, deadline or cancellation.
+/// Options must be zero. A mismatch returns success without waiting.
+///
+/// # Safety
+/// `vmo` must remain live. Concurrent accesses through every alias of the word
+/// must be aligned atomic u32 operations of matching width for the entire call.
+pub unsafe fn vmo_wait_u32(
+    vmo: abi::HyperNativeHandle,
+    offset: u64,
+    expected: u32,
+    deadline: u64,
+    options: u64,
+) -> abi::HyperNativeStatus {
+    // SAFETY: the caller retains the VMO and establishes atomic aliasing.
+    unsafe {
+        ffi_native_invoke6(
+            vmo,
+            abi::HYPER_NATIVE_OP_VMO_WAIT_U32,
+            offset,
+            u64::from(expected),
+            deadline,
+            options,
+            0,
+            0,
+        )
+        .status
+    }
+}
+
+/// Wakes up to `count` shared waiters at one VMO-relative u32 word.
+///
+/// # Safety
+/// `vmo` must remain live throughout this call. No user pointer is retained or read.
+pub unsafe fn vmo_wake_u32(
+    vmo: abi::HyperNativeHandle,
+    offset: u64,
+    count: u32,
+    options: u64,
+) -> CallResult {
+    // SAFETY: the caller retains the borrowed VMO; the kernel validates bounds.
+    unsafe {
+        ffi_native_invoke6(
+            vmo,
+            abi::HYPER_NATIVE_OP_VMO_WAKE_U32,
+            offset,
+            u64::from(count),
+            options,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
 /// Installs a private mapping of immutable snapshot bytes.
 ///
 /// # Safety
