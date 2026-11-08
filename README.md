@@ -195,6 +195,22 @@ shared wait retains writable admission and backing even after unmap, so ordinary
 VMO byte reads/writes, snapshots and new exclusive hardware ownership return BUSY.
 Wake does not access backing and can return zero during hardware ownership.
 
+Executable memory requires an explicitly delegated `ExecutableAuthority`;
+ordinary applications receive none by default. In `memory`, wrap that startup
+handle with `ExecutableAuthority::from_handle`, then `publish(source)` to obtain
+an `ExecutableVmo`. Publication copies the whole ordinary writable RAM VMO into
+physically distinct immutable backing charged to the caller. It requires
+CREATE_EXECUTABLE on the authority and READ on the source; active writable
+mappings, shared atomic waits and hardware leases return BUSY. Unmap write views
+before publishing. Later writes to the original source cannot change the result.
+
+`unsafe { executable.map(root_vmar) }` reserves an RX child mapping. Its
+`base_address()` exposes no safe callable function: the caller remains responsible
+for instruction validity, ABI correctness and any accessed memory, and must finish
+execution before dropping the mapping. The kernel completes instruction-cache
+publication before returning the executable VMO. No operation creates a writable
+alias to the executable copy. The VMO and mapping have independent lifetimes.
+
 With the optional `hyper-os/std` feature on HypeR targets,
 `hyper_os::fs::File::into_std()` transfers a Native File capability into
 `std::fs::File` without reopening or duplicating it. The standard file owns

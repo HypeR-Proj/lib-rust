@@ -216,6 +216,31 @@ pub unsafe fn vmar_destroy(vmar: abi::HyperNativeHandle) -> abi::HyperNativeStat
     unsafe { ffi_native_invoke6(vmar, abi::HYPER_NATIVE_OP_VMAR_DESTROY, 0, 0, 0, 0, 0, 0).status }
 }
 
+/// Publishes an immutable executable copy with explicit authority. Options must be zero.
+///
+/// # Safety
+/// `authority` and `source` must remain live. On success, adopt the new VMO in
+/// `value0`; `value1` reports its size. Publication never consumes either input.
+pub unsafe fn executable_publish(
+    authority: abi::HyperNativeHandle,
+    source: abi::HyperNativeHandle,
+    options: u64,
+) -> CallResult {
+    // SAFETY: caller retains both inputs and assumes ownership of success output.
+    unsafe {
+        ffi_native_invoke6(
+            authority,
+            abi::HYPER_NATIVE_OP_EXECUTABLE_PUBLISH,
+            source,
+            options,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
 /// Creates an immutable snapshot of borrowed VMO bytes.
 ///
 /// # Safety
