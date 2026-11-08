@@ -709,8 +709,12 @@ mod raw_ops {
 
     static SENTINEL_CLOSE_COUNT: AtomicU64 = AtomicU64::new(0);
     static ALIAS_CLOSE_COUNT: AtomicU64 = AtomicU64::new(0);
+    static EXECUTABLE_CLOSE_COUNT: AtomicU64 = AtomicU64::new(0);
 
     pub(super) fn close(raw: NonZeroU64) -> Status {
+        if matches!(raw.get(), 0x40009 | 0x50009 | 0x60009) {
+            let _ = EXECUTABLE_CLOSE_COUNT.fetch_add(1, Ordering::Relaxed);
+        }
         if raw.get() == super::TEST_SENTINEL_HANDLE {
             let _ = SENTINEL_CLOSE_COUNT.fetch_add(1, Ordering::Relaxed);
         }
@@ -726,6 +730,10 @@ mod raw_ops {
 
     pub(crate) fn alias_close_count() -> u64 {
         ALIAS_CLOSE_COUNT.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn executable_close_count() -> u64 {
+        EXECUTABLE_CLOSE_COUNT.load(Ordering::Relaxed)
     }
 
     pub(super) fn duplicate(raw: NonZeroU64, _rights: Rights) -> hyper_sys::CallResult {
@@ -798,6 +806,11 @@ const TEST_ALIAS_HANDLE: u64 = u64::MAX - 2;
 #[cfg(test)]
 pub(crate) fn test_sentinel_close_count() -> u64 {
     raw_ops::sentinel_close_count()
+}
+
+#[cfg(test)]
+pub(crate) fn test_executable_close_count() -> u64 {
+    raw_ops::executable_close_count()
 }
 
 #[cfg(test)]
