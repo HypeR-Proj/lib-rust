@@ -117,7 +117,7 @@ pub use vm::{
 };
 pub use wait::{
     atomic_wait, atomic_wake, object_wait_many, object_wait_one, wait_set_add, wait_set_create,
-    wait_set_rearm, wait_set_remove, wait_set_wait,
+    wait_set_rearm, wait_set_remove, wait_set_wait, wait_set_wait_batch,
 };
 
 /// Register result returned by one `HypeR` Native syscall.

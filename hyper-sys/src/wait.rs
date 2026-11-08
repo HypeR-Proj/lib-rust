@@ -186,3 +186,36 @@ pub unsafe fn wait_set_wait(
         )
     }
 }
+
+/// Consumes a bounded prefix of strided wait-set event records.
+///
+/// Success returns the consumed count in `value0`; only that prefix is valid.
+/// A failed copy may partially modify the following record without consuming it.
+///
+/// # Safety
+///
+/// `set` must remain live and `output` must be writable for the checked product
+/// of `capacity` and `record_size` bytes throughout the call. The caller must
+/// ignore output outside the returned prefix, including on failure.
+pub unsafe fn wait_set_wait_batch(
+    set: abi::HyperNativeHandle,
+    deadline: u64,
+    output: *mut u8,
+    capacity: usize,
+    record_size: usize,
+    options: u64,
+) -> CallResult {
+    // SAFETY: the caller pins the handle and supplies writable array storage.
+    unsafe {
+        ffi_native_invoke6(
+            set,
+            abi::HYPER_NATIVE_OP_WAIT_SET_WAIT_BATCH,
+            deadline,
+            output as u64,
+            capacity as u64,
+            record_size as u64,
+            options,
+            0,
+        )
+    }
+}
