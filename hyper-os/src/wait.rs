@@ -16,6 +16,9 @@ const _: () = assert!(hyper_abi::HYPER_NATIVE_OBJECT_WAIT_MANY_MAX_ITEMS <= usiz
 /// Maximum number of objects accepted by one multi-object wait.
 pub const MAX_ITEMS: usize = hyper_abi::HYPER_NATIVE_OBJECT_WAIT_MANY_MAX_ITEMS as usize;
 
+/// Maximum number of notifications consumed in one batch wait.
+pub const MAX_BATCH_EVENTS: usize = hyper_abi::HYPER_NATIVE_WAIT_SET_BATCH_MAX_EVENTS as usize;
+
 /// A signal mask whose object kind is carried by the type system.
 #[derive(Debug, Eq, PartialEq)]
 pub struct ObjectSignals<T: ObjectType> {
@@ -263,6 +266,51 @@ pub struct Notification {
     pub sequence: u64,
 }
 
+impl Notification {
+    fn decode(record: &[u8; 24]) -> Result<Self> {
+        let word = |start: usize| {
+            let mut bytes = [0; 8];
+            bytes.copy_from_slice(&record[start..start + 8]);
+            u64::from_le_bytes(bytes)
+        };
+        let registration = core::num::NonZeroU64::new(word(0))
+            .map(RegistrationId)
+            .ok_or(Error::InvalidResponse)?;
+        let signals = word(8);
+        if signals == 0 {
+            return Err(Error::InvalidResponse);
+        }
+        Ok(Self {
+            registration,
+            signals,
+            sequence: word(16),
+        })
+    }
+}
+
+fn decode_batch(
+    result: hyper_sys::CallResult,
+    records: &[[u8; 24]],
+    output: &mut [Option<Notification>],
+) -> Result<usize> {
+    output.fill(None);
+    Status::from_raw(result.status).into_result()?;
+    let count = usize::try_from(result.value0).map_err(|_| Error::InvalidResponse)?;
+    if count == 0 || count > output.len() || count > records.len() || result.value1 != 0 {
+        return Err(Error::InvalidResponse);
+    }
+    for index in 0..count {
+        match Notification::decode(&records[index]) {
+            Ok(event) => output[index] = Some(event),
+            Err(error) => {
+                output.fill(None);
+                return Err(error);
+            }
+        }
+    }
+    Ok(count)
+}
+
 /// Persistent, bounded subscriptions to Native object signals.
 ///
 /// Registrations retain source object lifetime, independently of source handle
@@ -352,23 +400,41 @@ impl WaitSet {
             )
         };
         Status::from_raw(result.status).into_result()?;
-        let decode = |start: usize| -> u64 {
-            let mut bytes = [0; 8];
-            bytes.copy_from_slice(&record[start..start + 8]);
-            u64::from_le_bytes(bytes)
-        };
-        let registration = core::num::NonZeroU64::new(decode(0))
-            .map(RegistrationId)
-            .ok_or(Error::InvalidResponse)?;
-        let signals = decode(8);
-        if result.value0 != 0 || result.value1 != 0 || signals == 0 {
+        if result.value0 != 0 || result.value1 != 0 {
             return Err(Error::InvalidResponse);
         }
-        Ok(Notification {
-            registration,
-            signals,
-            sequence: decode(16),
-        })
+        Notification::decode(&record)
+    }
+
+    /// Consumes up to `output.len()` events, waiting only for the first event.
+    ///
+    /// The capacity must be 1 through [`MAX_BATCH_EVENTS`]. On success the first
+    /// returned-count slots are `Some`, and the rest are `None`. On error all
+    /// slots are `None`. Later copy failures return the already consumed prefix.
+    /// A batch is not a queue snapshot; concurrent consumers/rearms may interleave.
+    /// Removing a subscription does not invalidate an already delivered event.
+    ///
+    /// This operation allocates no heap storage. Initialize a reusable buffer
+    /// with `[None; 16]` and process its populated slots before rearming them.
+    pub fn wait_batch(&self, deadline: u64, output: &mut [Option<Notification>]) -> Result<usize> {
+        output.fill(None);
+        if output.is_empty() || output.len() > MAX_BATCH_EVENTS {
+            return Err(Error::InvalidWaitSet);
+        }
+        let mut records = [[0u8; 24]; MAX_BATCH_EVENTS];
+        // SAFETY: the owner pins the set; the bounded record array is exclusively
+        // writable for output.len() complete wire records throughout the call.
+        let result = unsafe {
+            hyper_sys::wait_set_wait_batch(
+                self.handle.as_handle_ref().raw().get(),
+                deadline,
+                records.as_mut_ptr().cast(),
+                output.len(),
+                24,
+                0,
+            )
+        };
+        decode_batch(result, &records, output)
     }
 }
 
@@ -392,3 +458,7 @@ impl ObjectSignals<crate::handle::PhysicalDeviceObject> {
     pub const READABLE: Self =
         Self::from_trusted_bits(hyper_abi::HYPER_NATIVE_SIGNAL_PHYSICAL_DEVICE_READABLE);
 }
+
+#[cfg(test)]
+#[path = "../tests/wait_batch.rs"]
+mod batch_tests;

@@ -165,6 +165,14 @@ WAIT. Closing a set removes its subscriptions; source handle closure does not
 cancel the retained object observation. WaitSet and CapabilityChannel sources
 are currently rejected. ByteChannel endpoints can be explicitly duplicated;
 peer close occurs only after the last active endpoint owner closes.
+`wait_batch(deadline, &mut [None; N])` consumes up to 64 notifications in one
+invocation without heap allocation. It waits only for the first event, then
+returns the immediately available prefix; process the first returned-count
+`Some` slots and rearm each registration as appropriate. Remaining slots are
+`None`. Concurrent consumers or rearm can interleave, so this is not an atomic
+snapshot. An already delivered notification can outlive registration removal;
+consumers replacing subscriptions must recognize stale IDs. The single-event
+`wait` remains available.
 
 With the optional `hyper-os/std` feature on HypeR targets,
 `hyper_os::fs::File::into_std()` transfers a Native File capability into
