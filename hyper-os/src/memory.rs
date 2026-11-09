@@ -8,8 +8,10 @@ use crate::handle::{AnyObject, HandleRef, OwnedHandle, Rights, VmoObject};
 mod atomic;
 mod atomic_wait;
 mod executable;
+mod file;
 pub use atomic::SharedAtomicU32Mapping;
 pub use executable::{ExecutableAuthority, ExecutableMapping, ExecutableVmo};
+pub use file::{SharedFileMapping, SharedFileMappingCloseError, SharedFileMappingOptions};
 mod private;
 mod residency;
 /// Releases empty process-heap regions without affecting live allocations.

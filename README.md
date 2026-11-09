@@ -276,6 +276,35 @@ Providers that transform bytes can return `Unsupported` to use buffered reads.
 See [block I/O](https://hyper-proj.github.io/lib-block/docs/block-io.html) for copy boundaries,
 ordering, failure and quota semantics.
 
+## Shared file mappings
+
+`file.map_shared(parent, options)` reserves a free child VMAR and creates a
+`SharedFileMapping` over existing complete file pages in the calling process.
+`unsafe { file.map_shared_at(parent, address, options) }` is the exact-address
+variant for callers that already control their virtual-address layout.
+It needs File READ, and WRITE for shared writable authority, plus VMAR MAP.
+An initially read-only mapping still retains potential WRITE when its source
+File has WRITE. Use a READ-only source to avoid that lease and its exclusion of
+FileProtection.
+The initial implementation requires a provider that delegated periodic writeback
+ownership; synchronous FAT providers reject the operation. File-size changes,
+conflicting content protection and executable shared access are rejected.
+Explicit residency locking and address-keyed atomic wait/wake on shared file
+mappings are unsupported; coordination uses separate objects or memory.
+
+Shared mappings and ordinary file reads/writes access the same canonical bytes.
+The owner exposes raw pointers, never safe Rust slices: applications must uphold
+aliasing, atomic-access and cross-process synchronization requirements. Closing
+the original File preserves mapping authority. `sync(SyncScope::Data)` and
+`sync(SyncScope::Full)` synchronize through that retained authority; they require
+the source File to have carried WRITE at mapping creation. `sync_range` accepts whole pages, while `Volume` is not a range scope. These are file fences,
+not unconditional checkpoints or atomic snapshots of concurrent writers.
+
+`try_close` unmaps and destroys the owned region, retaining retry authority on
+failure. Drop attempts cleanup once. Neither unmap nor process exit implies
+fsync. Faults that cannot be serviced retain the kernel's fatal-fault policy;
+normal mapping does not pin pages or extend VMO atomic wait/wake to files.
+
 ## Explicit memory residency
 
 `hyper_os::memory::{lock_memory, unlock_memory}` operate on a nonempty,

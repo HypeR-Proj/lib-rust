@@ -425,6 +425,62 @@ pub unsafe fn vmar_map_file(
     }
 }
 
+/// Maps coherent shared file bytes into a VMAR of the calling process.
+///
+/// # Safety
+/// The caller owns the unused destination range and retains VMAR MAP and File
+/// READ authority. Shared writable authority additionally requires File WRITE.
+/// `mapping` must remain readable for `mapping_size` bytes. Shared bytes may be
+/// mutated by other mappings or ordinary file I/O, so they cannot be borrowed
+/// as ordinary Rust references without independent synchronization.
+pub unsafe fn vmar_map_file_shared(
+    vmar: abi::HyperNativeHandle,
+    file: abi::HyperNativeHandle,
+    mapping: *const abi::HyperNativeSharedFileMapping,
+    mapping_size: usize,
+) -> abi::HyperNativeStatus {
+    // SAFETY: the caller retains the capabilities, range and readable record.
+    unsafe {
+        ffi_native_invoke6(
+            vmar,
+            abi::HYPER_NATIVE_OP_VMAR_MAP_FILE_SHARED,
+            file,
+            mapping as u64,
+            mapping_size as u64,
+            0,
+            0,
+            0,
+        )
+        .status
+    }
+}
+
+/// Synchronizes an already mapped shared-file range using retained authority.
+///
+/// # Safety
+/// `vmar` must remain a live VMAR of the calling process with MAP authority.
+/// `sync` must remain readable for `sync_size` bytes throughout the call.
+pub unsafe fn vmar_sync_file_range(
+    vmar: abi::HyperNativeHandle,
+    sync: *const abi::HyperNativeSharedFileSync,
+    sync_size: usize,
+) -> abi::HyperNativeStatus {
+    // SAFETY: the caller retains the VMAR and readable request record.
+    unsafe {
+        ffi_native_invoke6(
+            vmar,
+            abi::HYPER_NATIVE_OP_VMAR_SYNC_FILE_RANGE,
+            sync as u64,
+            sync_size as u64,
+            0,
+            0,
+            0,
+            0,
+        )
+        .status
+    }
+}
+
 /// Populate and retain the requested mappings, with explicit `LOCK_MEMORY` authority.
 ///
 /// # Safety

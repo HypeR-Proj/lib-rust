@@ -84,9 +84,9 @@ pub use ipc::{
 };
 pub use memory::{
     executable_publish, vmar_allocate, vmar_destroy, vmar_lock_memory, vmar_map, vmar_map_file,
-    vmar_map_private, vmar_protect, vmar_unlock_memory, vmar_unmap, vmo_create,
-    vmo_create_contiguous, vmo_create_snapshot, vmo_get_dma_extent, vmo_read, vmo_wait_u32,
-    vmo_wake_u32, vmo_write,
+    vmar_map_file_shared, vmar_map_private, vmar_protect, vmar_sync_file_range, vmar_unlock_memory,
+    vmar_unmap, vmo_create, vmo_create_contiguous, vmo_create_snapshot, vmo_get_dma_extent,
+    vmo_read, vmo_wait_u32, vmo_wake_u32, vmo_write,
 };
 pub use retirement::{
     crash_view_get_info, crash_view_handle, crash_view_mapping, crash_view_read, crash_view_thread,
