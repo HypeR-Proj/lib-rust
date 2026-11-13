@@ -30,7 +30,8 @@ const WRITABLE_RIGHTS: Rights = Rights::DUPLICATE
     .union(Rights::INSPECT)
     .union(Rights::READ)
     .union(Rights::WRITE)
-    .union(Rights::MAP);
+    .union(Rights::MAP)
+    .union(Rights::SYNC_CONFIGURE);
 const _: () = assert!(hyper_abi::HYPER_NATIVE_VMO_MAX_TRANSFER_BYTES <= usize::MAX as u64);
 pub const PAGE_SIZE: u64 = hyper_abi::HYPER_NATIVE_PAGE_SIZE;
 pub const MAX_TRANSFER_BYTES: usize = hyper_abi::HYPER_NATIVE_VMO_MAX_TRANSFER_BYTES as usize;

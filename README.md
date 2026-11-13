@@ -305,6 +305,63 @@ failure. Drop attempts cleanup once. Neither unmap nor process exit implies
 fsync. Faults that cannot be serviced retain the kernel's fatal-fault policy;
 normal mapping does not pin pages or extend VMO atomic wait/wake to files.
 
+## Shared mutex owner-death recovery
+
+`hyper_os::sync` provides non-recursive process-shared mutexes over ordinary
+writable RAM VMOs. A `SyncDomain` binds one or more backing ranges using explicit
+`SYNC_CONFIGURE` authority. Binding survives local capability closure and cannot
+be reassigned while the backing remains live. Each cooperating Thread calls
+`domain.join()` once; its `Participant` remains tied to that Thread's actual
+lifetime, even if the local Rust value is dropped. Tokens are never reused in a
+live domain and convey no authority to control another Thread.
+
+Domain word waits and notifications use `SYNC_WAIT` and `SYNC_WAKE` rights;
+participant observation uses `INSPECT`, and joining uses `SYNC_JOIN`. A domain
+has no generic object signal state. Optional cancellation uses the independent
+Event's ordinary WAIT and SIGNAL rights.
+
+Map control storage using `unsafe { SharedMutexRegion::map(...) }`, then obtain
+a validated control-word view with `region.mutex(index)`. Indices count aligned
+u64 words. Mapping is the unsafe boundary: all aliases must use the same atomic
+width and protocol, and the private child mapping must remain under its owner's
+control. Fresh zeroed words are unlocked. Opening or dropping a view never resets
+an existing mutex. Reinitialization requires external quiescence of every owner,
+recovery guard, waiter and potential user. Payload storage is separate: these
+mutex guards expose no safe `&mut T` into potentially corrupt shared memory.
+
+`mutex.lock(&participant)`, `try_lock` and `lock_until` distinguish:
+
+- `Acquisition::Acquired(Guard)`: normal exclusive ownership.
+- `Acquisition::OwnerDied(RecoveryGuard)`: exclusive repair authority; consistency
+  has not been established. Validate/repair a crash-valid payload representation,
+  then call `mark_consistent` to obtain a normal guard.
+- `Err(LockError::NotRecoverable)`: no ownership; an earlier recovery guard was
+  abandoned. Dropping a recovery guard without confirmation poisons the mutex
+  and wakes all waiters. Death during recovery allows another recovery attempt.
+- Other errors, including timeout and cancellation, also carry no ownership.
+
+Both guard kinds and `Participant` are neither Send nor Sync. An uncontended
+ordinary acquisition/release uses no syscall after construction and join.
+Contended release wakes one; a selected waiter that cancels, times out or fails
+passes the wake opportunity onward. Unexpected notification failure after a
+committed release is terminal, allowing kernel death notification to preserve
+progress instead of silently stranding sleepers.
+
+`lock_until` uses an absolute monotonic retry/blocking deadline and an optional
+one-shot `Cancellation`. `cancel()` persistently signals its Event and wakes
+parked operations without polling. One initial nonblocking attempt is allowed
+even at an expired deadline or after cancellation. Later retries check both;
+a successful ownership CAS commits acquisition even if expiry/cancellation
+races that check. There is no reset operation on `Cancellation`.
+
+Domain death notifications also cover handoff to a newer owner while older
+waiters still remember the previous owner. Such notifications can wake unrelated
+waiters in that domain; every caller rechecks the current word and only a
+successful takeover CAS grants recovery. Completed writes become visible through
+the kernel's stop-and-publish death ordering; this is not transactionality or
+proof of payload validity. These primitives do not make file mappings eligible
+for VMO atomic waits and do not implement POSIX robust mutex or futex APIs.
+
 ## Explicit memory residency
 
 `hyper_os::memory::{lock_memory, unlock_memory}` operate on a nonempty,

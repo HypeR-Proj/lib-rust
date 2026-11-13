@@ -94,6 +94,10 @@ impl Rights {
         Self(hyper_abi::HYPER_NATIVE_RIGHT_RESOURCE_DOMAIN_SPONSOR);
     pub const DERIVE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_DERIVE);
     pub const BIND_WAIT: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_BIND_WAIT);
+    pub const SYNC_CONFIGURE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SYNC_CONFIGURE);
+    pub const SYNC_JOIN: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SYNC_JOIN);
+    pub const SYNC_WAIT: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SYNC_WAIT);
+    pub const SYNC_WAKE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SYNC_WAKE);
     pub const SET_ATTRIBUTES: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_SET_ATTRIBUTES);
     pub const LOCK_FILE: Self = Self(hyper_abi::HYPER_NATIVE_RIGHT_LOCK_FILE);
     /// May change topology through a live namespace-root capability.
@@ -197,6 +201,10 @@ const RIGHT_NAMES: &[(Rights, &str)] = &[
     (Rights::RESOURCE_DOMAIN_SPONSOR, "sponsor-domain"),
     (Rights::DERIVE, "derive"),
     (Rights::BIND_WAIT, "bind-wait"),
+    (Rights::SYNC_CONFIGURE, "sync-configure"),
+    (Rights::SYNC_JOIN, "sync-join"),
+    (Rights::SYNC_WAIT, "sync-wait"),
+    (Rights::SYNC_WAKE, "sync-wake"),
     (Rights::SET_ATTRIBUTES, "set-attributes"),
     (Rights::LOCK_FILE, "lock-file"),
     (Rights::PROTECT, "protect"),

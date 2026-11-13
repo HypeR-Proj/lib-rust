@@ -51,6 +51,12 @@ macro_rules! object_types {
 
 object_types!(
     (
+        SyncDomainObject,
+        HYPER_NATIVE_OBJECT_SYNC_DOMAIN,
+        "sync-domain",
+        "shared synchronization participant lifetime"
+    ),
+    (
         BlockQueueObject,
         HYPER_NATIVE_OBJECT_BLOCK_QUEUE,
         "block-queue",
